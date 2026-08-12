@@ -6,8 +6,8 @@ export const DetailsViewModal = ({ isOpen, onClose, data, type = 'organization' 
   const isOrg = type === 'organization'
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-sm">
-      <div className="w-full max-w-2xl bg-white rounded-2xl shadow-card-lg border border-gray-200 overflow-hidden max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-gray-900/50 backdrop-blur-sm overflow-y-auto">
+      <div className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden max-h-[85vh] my-auto flex flex-col relative z-[101]">
 
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gray-50">

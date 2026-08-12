@@ -4,11 +4,12 @@ import {
   RefreshCw, ChevronDown, Filter
 } from 'lucide-react'
 import { apiService } from '../services/api'
-import { Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { RejectionReasonModal } from '../components/modals/RejectionReasonModal'
 import { DetailsViewModal } from '../components/modals/DetailsViewModal'
 
 export const OrgApprovals = () => {
+  const navigate = useNavigate()
   const [organizations, setOrganizations] = useState([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('All')
@@ -148,7 +149,11 @@ export const OrgApprovals = () => {
                   </td>
                 </tr>
               ) : filtered.map(org => (
-                <tr key={org.id}>
+                <tr
+                  key={org.id}
+                  onClick={() => navigate(`/organizations/${org.id}`)}
+                  className="cursor-pointer hover:bg-green-50/60 transition-colors"
+                >
 
                   {/* Company Name */}
                   <td>
@@ -157,12 +162,7 @@ export const OrgApprovals = () => {
                         <Building2 className="w-4 h-4" />
                       </div>
                       <div>
-                        <Link
-                          to={`/organizations/${org.id}`}
-                          className="font-semibold text-green-700 hover:text-green-800 hover:underline text-sm leading-tight block"
-                        >
-                          {org.name}
-                        </Link>
+                        <div className="font-semibold text-gray-900 text-sm leading-tight">{org.name}</div>
                         <div className="text-xs text-gray-400">{org.email}</div>
                       </div>
                     </div>
@@ -199,7 +199,7 @@ export const OrgApprovals = () => {
                   </td>
 
                   {/* Actions */}
-                  <td>
+                  <td onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center justify-end gap-2">
                       {/* View Details */}
                       <button

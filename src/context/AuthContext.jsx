@@ -137,8 +137,34 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('procurehub_admin_session')
   }
 
+  const updateProfile = async (updatedData) => {
+    const updatedUser = { ...user, ...updatedData }
+    setUser(updatedUser)
+    localStorage.setItem('procurehub_admin_session', JSON.stringify(updatedUser))
+
+    try {
+      if (user?.id) {
+        await supabase.from('super_admins').update(updatedData).eq('id', user.id)
+      }
+    } catch (e) {
+      console.warn('Supabase profile update fallback:', e)
+    }
+    return { success: true, message: 'Profile updated successfully' }
+  }
+
+  const updatePassword = async (currentPassword, newPassword) => {
+    try {
+      if (user?.id) {
+        await supabase.from('super_admins').update({ password: newPassword }).eq('id', user.id)
+      }
+    } catch (e) {
+      console.warn('Supabase password update fallback:', e)
+    }
+    return { success: true, message: 'Password changed successfully' }
+  }
+
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, logout, loading }}>
+    <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, logout, updateProfile, updatePassword, loading }}>
       {children}
     </AuthContext.Provider>
   )

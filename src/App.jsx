@@ -9,6 +9,8 @@ import { Dashboard } from './pages/Dashboard'
 import { OrgApprovals } from './pages/OrgApprovals'
 import { VendorApprovals } from './pages/VendorApprovals'
 import { OrganizationDetail } from './pages/OrganizationDetail'
+import { VendorDetail } from './pages/VendorDetail'
+import { Security } from './pages/Security'
 
 export function App() {
   return (
@@ -26,6 +28,8 @@ export function App() {
               <Route path="/approvals/organizations" element={<OrgApprovals />} />
               <Route path="/approvals/vendors"       element={<VendorApprovals />} />
               <Route path="/organizations/:id"       element={<OrganizationDetail />} />
+              <Route path="/vendors/:id"             element={<VendorDetail />} />
+              <Route path="/security"                element={<Security />} />
             </Route>
           </Route>
 

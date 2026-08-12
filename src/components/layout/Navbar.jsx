@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Search, X, ChevronDown, LogOut, User } from 'lucide-react'
+import { Search, X, ChevronDown, LogOut, Lock, ShieldCheck } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { apiService } from '../../services/api'
 import { useAuth } from '../../context/AuthContext'
@@ -119,10 +119,16 @@ export const Navbar = () => {
               </div>
 
               {/* Menu items */}
-              <div className="p-1.5">
+              <div className="p-1.5 space-y-0.5">
+                <button
+                  onClick={() => { setShowProfile(false); navigate('/security') }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm text-gray-700 hover:bg-green-50 hover:text-green-700 transition-colors font-medium"
+                >
+                  <Lock className="w-4 h-4 text-green-600" /> Security &amp; Profile
+                </button>
                 <button
                   onClick={() => { setShowProfile(false); logout() }}
-                  className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm text-red-600 hover:bg-red-50 transition-colors font-medium"
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm text-red-600 hover:bg-red-50 transition-colors font-medium"
                 >
                   <LogOut className="w-4 h-4" /> Sign Out
                 </button>

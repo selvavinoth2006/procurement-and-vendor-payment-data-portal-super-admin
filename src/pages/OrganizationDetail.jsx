@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   ArrowLeft, Building2, Mail, Phone, MapPin, FileText,
-  ShoppingBag, IndianRupee, Truck, CreditCard,
+  User, Award, ShoppingBag, IndianRupee, Truck, CreditCard,
   CheckCircle2, Clock, Package, AlertTriangle, ChevronRight,
   Calendar, Filter, RefreshCw, ExternalLink, TrendingUp
 } from 'lucide-react'
@@ -50,11 +50,11 @@ export const OrganizationDetail = () => {
   const [org, setOrg]         = useState(null)
   const [orders, setOrders]   = useState([])
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState('orders')
+  const [activeTab, setActiveTab] = useState('details')
 
   // Filter state
-  const [filterMonth, setFilterMonth] = useState('All')
-  const [filterYear,  setFilterYear]  = useState('All')
+  const [filterMonth, setFilterMonth]   = useState('All')
+  const [filterYear,  setFilterYear]    = useState('All')
   const [filterStatus, setFilterStatus] = useState('All')
 
   useEffect(() => {
@@ -92,11 +92,10 @@ export const OrganizationDetail = () => {
   }), [orders, filterMonth, filterYear, filterStatus])
 
   // Summary stats
-  const totalSpend   = orders.reduce((s, o) => s + o.amount, 0)
+  const totalSpend   = orders.reduce((s, o) => s + (o.amount || 0), 0)
   const totalPaid    = orders.reduce((s, o) => s + (o.paid_amount  || 0), 0)
   const totalPending = orders.reduce((s, o) => s + (o.pending_amount || 0), 0)
   const delivered    = orders.filter(o => o.delivery_status === 'Delivered').length
-  const inTransit    = orders.filter(o => o.delivery_status === 'In Transit' || o.delivery_status === 'Out for Delivery').length
 
   if (loading) return (
     <div className="flex justify-center items-center h-64">
@@ -126,6 +125,9 @@ export const OrganizationDetail = () => {
         <div className="flex-1">
           <div className="flex items-center gap-3 flex-wrap">
             <h1 className="page-header">{org.name}</h1>
+            <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-green-50 text-green-700 border border-green-100">
+              {org.industry}
+            </span>
             <span className={
               org.status === 'Approved' ? 'badge-approved text-sm px-3 py-1' :
               org.status === 'Rejected' ? 'badge-rejected text-sm px-3 py-1' : 'badge-pending text-sm px-3 py-1'
@@ -133,61 +135,55 @@ export const OrganizationDetail = () => {
               {org.status}
             </span>
           </div>
-          <p className="page-sub">{org.industry} · {org.email} · GSTIN: {org.gstin || 'N/A'}</p>
+          <p className="page-sub">Org ID: {org.id} · Contact Email: {org.email} · GSTIN: {org.gstin || 'N/A'}</p>
         </div>
       </div>
 
-      {/* ── Org Info Cards row ── */}
+      {/* ── Summary Stat Cards (Matching Vendor style) ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {[
-          { icon: Mail,     label: 'Email',    value: org.email },
-          { icon: Phone,    label: 'Phone',    value: org.phone },
-          { icon: FileText, label: 'GSTIN',    value: org.gstin || 'N/A' },
-          { icon: MapPin,   label: 'Address',  value: org.address },
-        ].map((item, i) => {
-          const Icon = item.icon
-          return (
-            <div key={i} className="card px-4 py-3 flex items-start gap-2.5">
-              <div className="w-7 h-7 rounded-lg bg-green-50 border border-green-100 flex items-center justify-center text-green-600 shrink-0 mt-0.5">
-                <Icon className="w-3.5 h-3.5" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">{item.label}</p>
-                <p className="text-xs font-semibold text-gray-800 truncate mt-0.5">{item.value}</p>
-              </div>
-            </div>
-          )
-        })}
+        <div className="card px-4 py-3 flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-green-50 border border-green-100 flex items-center justify-center text-green-600 shrink-0">
+            <ShoppingBag className="w-4 h-4" />
+          </div>
+          <div>
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Total Orders</p>
+            <p className="text-base font-extrabold text-green-700">{orders.length} orders</p>
+          </div>
+        </div>
+        <div className="card px-4 py-3 flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-teal-50 border border-teal-100 flex items-center justify-center text-teal-600 shrink-0">
+            <TrendingUp className="w-4 h-4" />
+          </div>
+          <div>
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Total Spend</p>
+            <p className="text-base font-extrabold text-teal-700">₹{(totalSpend || org.spend || 0).toLocaleString('en-IN')}</p>
+          </div>
+        </div>
+        <div className="card px-4 py-3 flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 shrink-0">
+            <CreditCard className="w-4 h-4" />
+          </div>
+          <div>
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Amount Paid</p>
+            <p className="text-base font-extrabold text-emerald-700">₹{totalPaid.toLocaleString('en-IN')}</p>
+          </div>
+        </div>
+        <div className="card px-4 py-3 flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 shrink-0">
+            <Truck className="w-4 h-4" />
+          </div>
+          <div>
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Delivered Orders</p>
+            <p className="text-base font-extrabold text-blue-700">{delivered} / {orders.length}</p>
+          </div>
+        </div>
       </div>
 
-      {/* ── Summary Stat Cards ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-        {[
-          { label: 'Total Orders',   value: orders.length,          icon: ShoppingBag, color: 'text-green-700',  bg: 'bg-green-50',  border: 'border-green-100' },
-          { label: 'Total Spend',    value: `₹${totalSpend.toLocaleString('en-IN')}`, icon: TrendingUp, color: 'text-teal-700', bg: 'bg-teal-50', border: 'border-teal-100' },
-          { label: 'Amount Paid',    value: `₹${totalPaid.toLocaleString('en-IN')}`,  icon: CreditCard, color: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-100' },
-          { label: 'Pending Payment',value: `₹${totalPending.toLocaleString('en-IN')}`, icon: Clock, color: 'text-amber-700', bg: 'bg-amber-50', border: 'border-amber-100' },
-          { label: 'Delivered',      value: `${delivered} / ${orders.length}`,        icon: Truck, color: 'text-blue-700', bg: 'bg-blue-50', border: 'border-blue-100' },
-        ].map((c, i) => {
-          const Icon = c.icon
-          return (
-            <div key={i} className={`card px-4 py-3 border ${c.border} flex items-center gap-3`}>
-              <div className={`w-9 h-9 rounded-xl ${c.bg} flex items-center justify-center ${c.color} shrink-0`}>
-                <Icon className="w-4 h-4" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide leading-tight">{c.label}</p>
-                <p className={`text-base font-extrabold ${c.color} leading-tight mt-0.5 truncate`}>{c.value}</p>
-              </div>
-            </div>
-          )
-        })}
-      </div>
-
-      {/* ── Tabs ── */}
+      {/* ── Main Tab Navigation ── */}
       <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-xl w-fit">
         {[
-          { key: 'orders',   label: 'Orders & Delivery' },
+          { key: 'details',  label: 'Organization Profile Details' },
+          { key: 'orders',   label: `Orders & Delivery (${orders.length})` },
           { key: 'payments', label: 'Payments' },
         ].map(tab => (
           <button
@@ -202,110 +198,206 @@ export const OrganizationDetail = () => {
         ))}
       </div>
 
-      {/* ── FILTERS ROW ── */}
-      <div className="card p-3 flex flex-wrap items-center gap-3">
-        <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-500">
-          <Filter className="w-3.5 h-3.5" /> Filter by:
-        </div>
+      {/* ── TAB 1: DETAILS (Matching Vendor Profile Details Grid) ── */}
+      {activeTab === 'details' && (
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-        {/* Year */}
-        <select value={filterYear} onChange={e => setFilterYear(e.target.value)} className="filter-select text-xs">
-          <option value="All">All Years</option>
-          {years.map(y => <option key={y} value={y}>{y}</option>)}
-        </select>
+            {/* Contact Information Card */}
+            <div className="card p-5 space-y-4">
+              <h3 className="font-bold text-gray-900 flex items-center gap-2 border-b border-gray-100 pb-3">
+                <User className="w-4 h-4 text-green-600" /> Contact Information
+              </h3>
+              <div className="space-y-3 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-400 text-xs">Organization Name:</span>
+                  <span className="font-semibold text-gray-800">{org.name}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-400 text-xs">Email Address:</span>
+                  <span className="font-medium text-gray-700">{org.email}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-400 text-xs">Phone Number:</span>
+                  <span className="font-medium text-gray-700">{org.phone || 'N/A'}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-400 text-xs">Industry Sector:</span>
+                  <span className="font-semibold text-green-700">{org.industry}</span>
+                </div>
+              </div>
+            </div>
 
-        {/* Month */}
-        <select value={filterMonth} onChange={e => setFilterMonth(e.target.value)} className="filter-select text-xs">
-          <option value="All">All Months</option>
-          {months.map(m => {
-            const [yr, mn] = m.split('-')
-            return <option key={m} value={m}>{MONTH_LABELS[mn]} {yr}</option>
-          })}
-        </select>
+            {/* Tax & Compliance Card */}
+            <div className="card p-5 space-y-4">
+              <h3 className="font-bold text-gray-900 flex items-center gap-2 border-b border-gray-100 pb-3">
+                <FileText className="w-4 h-4 text-green-600" /> Tax &amp; Compliance Details
+              </h3>
+              <div className="space-y-3 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-400 text-xs">GSTIN Tax ID:</span>
+                  <span className="font-mono font-bold bg-green-50 border border-green-100 px-2.5 py-0.5 rounded-lg text-green-700 text-xs">
+                    {org.gstin || 'N/A'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-400 text-xs">Registration Date:</span>
+                  <span className="font-mono font-bold text-gray-700 text-xs">
+                    {new Date(org.created_at || Date.now()).toLocaleDateString()}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-400 text-xs">Governance Status:</span>
+                  <span className={org.status === 'Approved' ? 'badge-approved' : org.status === 'Rejected' ? 'badge-rejected' : 'badge-pending'}>
+                    {org.status}
+                  </span>
+                </div>
+                {org.rejection_reason && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 mt-2">
+                    <span className="font-bold block">Rejection Note:</span>
+                    {org.rejection_reason}
+                  </div>
+                )}
+              </div>
+            </div>
 
-        {/* Order Status */}
-        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="filter-select text-xs">
-          <option value="All">All Statuses</option>
-          <option value="Disbursed">Disbursed</option>
-          <option value="Fulfilled">Fulfilled</option>
-          <option value="Approved">Approved</option>
-          <option value="Pending">Pending</option>
-        </select>
-
-        {/* Reset */}
-        {(filterYear !== 'All' || filterMonth !== 'All' || filterStatus !== 'All') && (
-          <button
-            onClick={() => { setFilterYear('All'); setFilterMonth('All'); setFilterStatus('All') }}
-            className="text-xs text-red-500 hover:text-red-700 font-semibold flex items-center gap-1"
-          >
-            <RefreshCw className="w-3 h-3" /> Reset
-          </button>
-        )}
-
-        <span className="ml-auto text-xs text-gray-400 font-medium">
-          {filteredOrders.length} of {orders.length} orders
-        </span>
-      </div>
-
-      {/* ── ORDERS & DELIVERY TAB ── */}
-      {activeTab === 'orders' && (
-        <div className="card overflow-hidden">
-          <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
-            <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-              <ShoppingBag className="w-4 h-4 text-green-600" /> Purchase Orders & Delivery Status
-            </h3>
-            <span className="text-xs text-gray-400">{filteredOrders.length} orders</span>
           </div>
 
-          <table className="w-full data-table">
-            <thead>
-              <tr>
-                <th>PO Number</th>
-                <th>Vendor / Supplier</th>
-                <th>Order Value</th>
-                <th>Order Status</th>
-                <th>Delivery Status</th>
-                <th>Date</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredOrders.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="text-center py-12">
-                    <ShoppingBag className="w-10 h-10 text-gray-200 mx-auto mb-2" />
-                    <p className="text-gray-400 font-medium">No orders for the selected filters</p>
-                  </td>
-                </tr>
-              ) : filteredOrders.map(order => (
-                <tr key={order.id}>
-                  <td>
-                    <div className="font-bold text-gray-900 font-mono text-sm">{order.po_number}</div>
-                    <div className="text-xs text-gray-400">{order.items_count} line items</div>
-                  </td>
-                  <td className="font-medium text-gray-700">{order.vendor_name}</td>
-                  <td className="font-extrabold text-gray-900">₹{order.amount.toLocaleString('en-IN')}</td>
-                  <td>
-                    <span className={
-                      order.status === 'Disbursed' || order.status === 'Fulfilled' ? 'badge-approved' :
-                      order.status === 'Pending' ? 'badge-pending' : 'badge-approved'
-                    }>
-                      {order.status}
-                    </span>
-                  </td>
-                  <td><DeliveryBadge status={order.delivery_status} /></td>
-                  <td className="text-gray-500 font-medium">{order.date}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          {/* Address & Spend Overview */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="card p-5 space-y-2">
+              <h3 className="font-bold text-gray-900 flex items-center gap-2 border-b border-gray-100 pb-3">
+                <MapPin className="w-4 h-4 text-green-600" /> Registered Business Address
+              </h3>
+              <p className="text-xs text-gray-600 leading-relaxed pt-1">
+                {org.address || 'Registered address information not provided.'}
+              </p>
+            </div>
+
+            <div className="card p-5 space-y-3">
+              <h3 className="font-bold text-gray-900 flex items-center gap-2 border-b border-gray-100 pb-3">
+                <Award className="w-4 h-4 text-green-600" /> Procurement Spend Overview
+              </h3>
+              <div>
+                <div className="flex justify-between text-xs mb-1">
+                  <span className="text-gray-400">Cumulative Spend Utilization</span>
+                  <span className="font-extrabold text-green-700">₹{(totalSpend || org.spend || 0).toLocaleString('en-IN')}</span>
+                </div>
+                <div className="w-full bg-gray-100 h-3 rounded-full overflow-hidden">
+                  <div
+                    className="bg-green-500 h-full rounded-full transition-all"
+                    style={{ width: `${Math.min(100, Math.max(15, (orders.length * 10)))}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
-      {/* ── PAYMENTS TAB ── */}
+      {/* ── TAB 2: ORDERS & DELIVERY ── */}
+      {activeTab === 'orders' && (
+        <div className="space-y-4">
+
+          {/* Filters Bar */}
+          <div className="card p-3 flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-500">
+              <Filter className="w-3.5 h-3.5" /> Filter by:
+            </div>
+
+            <select value={filterYear} onChange={e => setFilterYear(e.target.value)} className="filter-select text-xs">
+              <option value="All">All Years</option>
+              {years.map(y => <option key={y} value={y}>{y}</option>)}
+            </select>
+
+            <select value={filterMonth} onChange={e => setFilterMonth(e.target.value)} className="filter-select text-xs">
+              <option value="All">All Months</option>
+              {months.map(m => {
+                const [yr, mn] = m.split('-')
+                return <option key={m} value={m}>{MONTH_LABELS[mn]} {yr}</option>
+              })}
+            </select>
+
+            <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="filter-select text-xs">
+              <option value="All">All Statuses</option>
+              <option value="Disbursed">Disbursed</option>
+              <option value="Fulfilled">Fulfilled</option>
+              <option value="Approved">Approved</option>
+              <option value="Pending">Pending</option>
+            </select>
+
+            {(filterYear !== 'All' || filterMonth !== 'All' || filterStatus !== 'All') && (
+              <button
+                onClick={() => { setFilterYear('All'); setFilterMonth('All'); setFilterStatus('All') }}
+                className="text-xs text-red-500 hover:text-red-700 font-semibold flex items-center gap-1"
+              >
+                <RefreshCw className="w-3 h-3" /> Reset
+              </button>
+            )}
+
+            <span className="ml-auto text-xs text-gray-400 font-medium">
+              {filteredOrders.length} of {orders.length} orders
+            </span>
+          </div>
+
+          {/* Orders Table */}
+          <div className="card overflow-hidden">
+            <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
+              <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                <ShoppingBag className="w-4 h-4 text-green-600" /> Purchase Orders &amp; Delivery Status
+              </h3>
+              <span className="text-xs text-gray-400">{filteredOrders.length} orders</span>
+            </div>
+
+            <table className="w-full data-table">
+              <thead>
+                <tr>
+                  <th>PO Number</th>
+                  <th>Vendor / Supplier</th>
+                  <th>Order Value</th>
+                  <th>Order Status</th>
+                  <th>Delivery Status</th>
+                  <th>Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredOrders.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="text-center py-12 text-gray-400 font-medium">
+                      No purchase orders match current filters
+                    </td>
+                  </tr>
+                ) : filteredOrders.map(order => (
+                  <tr key={order.id}>
+                    <td>
+                      <div className="font-bold text-gray-900 font-mono text-sm">{order.po_number}</div>
+                      <div className="text-xs text-gray-400">{order.items_count} line items</div>
+                    </td>
+                    <td className="font-medium text-gray-700">{order.vendor_name}</td>
+                    <td className="font-extrabold text-gray-900">₹{order.amount.toLocaleString('en-IN')}</td>
+                    <td>
+                      <span className={
+                        order.status === 'Disbursed' || order.status === 'Fulfilled' ? 'badge-approved' :
+                        order.status === 'Pending' ? 'badge-pending' : 'badge-approved'
+                      }>
+                        {order.status}
+                      </span>
+                    </td>
+                    <td><DeliveryBadge status={order.delivery_status} /></td>
+                    <td className="text-gray-500 font-medium">{order.date}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* ── TAB 3: PAYMENTS ── */}
       {activeTab === 'payments' && (
         <div className="space-y-4">
 
-          {/* Payment summary bar */}
+          {/* Payment Summary Bar */}
           <div className="card p-5 space-y-3">
             <h3 className="font-semibold text-gray-900 flex items-center gap-2">
               <CreditCard className="w-4 h-4 text-green-600" /> Payment Summary
@@ -332,7 +424,7 @@ export const OrganizationDetail = () => {
             </div>
           </div>
 
-          {/* Payment table */}
+          {/* Payment Table */}
           <div className="card overflow-hidden">
             <div className="px-5 py-3 border-b border-gray-100">
               <h3 className="font-semibold text-gray-900 flex items-center gap-2">

@@ -4,10 +4,12 @@ import {
   RefreshCw, User, FileText
 } from 'lucide-react'
 import { apiService } from '../services/api'
+import { useNavigate } from 'react-router-dom'
 import { RejectionReasonModal } from '../components/modals/RejectionReasonModal'
 import { DetailsViewModal } from '../components/modals/DetailsViewModal'
 
 export const VendorApprovals = () => {
+  const navigate = useNavigate()
   const [vendors, setVendors] = useState([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('All')
@@ -147,7 +149,11 @@ export const VendorApprovals = () => {
                   </td>
                 </tr>
               ) : filtered.map(vendor => (
-                <tr key={vendor.id}>
+                <tr
+                  key={vendor.id}
+                  onClick={() => navigate(`/vendors/${vendor.id}`)}
+                  className="cursor-pointer hover:bg-green-50/60 transition-colors"
+                >
 
                   {/* Vendor Name */}
                   <td>
@@ -222,7 +228,7 @@ export const VendorApprovals = () => {
                   </td>
 
                   {/* Actions */}
-                  <td>
+                  <td onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center justify-end gap-2">
                       <button
                         onClick={() => { setInspectVendor(vendor); setDetailsModalOpen(true) }}

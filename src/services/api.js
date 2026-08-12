@@ -551,5 +551,124 @@ export const apiService = {
 
     enriched.sort((a, b) => new Date(b.date) - new Date(a.date))
     return enriched
+  },
+
+  // ── Get single vendor by id ───────────────────────────────────────────────
+  async getVendorById(id) {
+    const vendors = await this.getVendors()
+    return vendors.find(v => String(v.id) === String(id)) || null
+  },
+
+  // ── Get products for a specific vendor ───────────────────────────────────
+  async getVendorProducts(vendorId) {
+    const vendors = await this.getVendors()
+    const vendor  = vendors.find(v => String(v.id) === String(vendorId))
+    const vName   = vendor?.name ? vendor.name.toLowerCase().trim() : ''
+
+    let realProds = []
+
+    try {
+      const { data, error } = await supabase.from('products').select('*')
+      if (!error && data && data.length > 0) {
+        realProds = data.filter(p => 
+          String(p.vendor_id) === String(vendorId) ||
+          (p.vendor_name && p.vendor_name.toLowerCase().trim() === vName)
+        )
+      }
+    } catch (e) {
+      console.warn('Supabase vendor products query error:', e)
+    }
+
+    if (realProds.length === 0) {
+      const allProducts = await this.getProducts()
+      realProds = allProducts.filter(p => 
+        String(p.vendor_id) === String(vendorId) ||
+        (p.vendor_name && p.vendor_name.toLowerCase().trim() === vName)
+      )
+    }
+
+    return realProds
+  },
+
+  // ── Get orders for a specific vendor ─────────────────────────────────────
+  async getVendorOrders(vendorId) {
+    const vendors = await this.getVendors()
+    const vendor  = vendors.find(v => String(v.id) === String(vendorId))
+    const vName   = vendor?.name ? vendor.name.toLowerCase().trim() : ''
+
+    let realOrders = []
+
+    try {
+      const { data: poData, error: poErr } = await supabase
+        .from('purchase_orders')
+        .select('*')
+        .order('created_at', { ascending: false })
+
+      if (!poErr && poData && poData.length > 0) {
+        realOrders = poData.filter(o => 
+          String(o.vendor_id) === String(vendorId) || 
+          (o.vendor_name && o.vendor_name.toLowerCase().trim() === vName)
+        )
+      } else {
+        const { data: oData, error: oErr } = await supabase
+          .from('orders')
+          .select('*')
+          .order('created_at', { ascending: false })
+
+        if (!oErr && oData && oData.length > 0) {
+          realOrders = oData.filter(o => 
+            String(o.vendor_id) === String(vendorId) || 
+            (o.vendor_name && o.vendor_name.toLowerCase().trim() === vName)
+          )
+        }
+      }
+    } catch (e) {
+      console.warn('Supabase vendor orders query error:', e)
+    }
+
+    if (realOrders.length === 0) {
+      const allOrders = await this.getOrders()
+      realOrders = allOrders.filter(o => 
+        String(o.vendor_id) === String(vendorId) || 
+        (o.vendor_name && o.vendor_name.toLowerCase().trim() === vName)
+      )
+    }
+
+    const deliveryStatuses = ['Delivered', 'In Transit', 'Processing', 'Out for Delivery', 'Pending Pickup']
+    const enriched = realOrders.map((o, idx) => {
+      const amt     = Number(o.amount || o.total_amount || o.total_price || o.total || 0)
+      const status  = o.status || 'Pending'
+      const isPaid  = status === 'Disbursed' || status === 'Paid' || status === 'Fulfilled' || status === 'Completed'
+      const isPart  = status === 'Partial'
+
+      const paidAmt    = Number(o.paid_amount !== undefined ? o.paid_amount : isPaid ? amt : isPart ? Math.round(amt * 0.5) : 0)
+      const pendingAmt = Number(o.pending_amount !== undefined ? o.pending_amount : amt - paidAmt)
+
+      const dStatus = o.delivery_status || o.shipping_status || (isPaid ? 'Delivered' : status === 'Approved' ? 'In Transit' : 'Processing')
+      const pStatus = o.payment_status || (isPaid ? 'Paid' : isPart ? 'Partial' : 'Pending')
+
+      const rawDate = o.date || o.created_at || new Date().toISOString().slice(0, 10)
+      const dateStr = String(rawDate).slice(0, 10)
+
+      return {
+        id:              o.id || `po-vendor-${idx + 1}`,
+        po_number:       o.po_number || o.order_number || o.code || `PO-2026-${100 + idx}`,
+        buyer_name:      o.buyer_name || o.organization_name || 'Buyer Enterprise',
+        amount:          amt,
+        paid_amount:     paidAmt,
+        pending_amount:  pendingAmt,
+        status:          status,
+        delivery_status: dStatus,
+        payment_status:  pStatus,
+        payment_ref:     o.payment_ref || o.transaction_ref || (isPaid ? `PAY-TXN-${1000 + idx}` : '—'),
+        date:            dateStr,
+        month:           dateStr.slice(0, 7),
+        items_count:     Number(o.items_count || o.total_items || (o.items ? o.items.length : 1)),
+      }
+    })
+
+    enriched.sort((a, b) => new Date(b.date) - new Date(a.date))
+    return enriched
   }
 }
+

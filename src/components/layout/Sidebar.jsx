@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react'
-import { NavLink, useLocation } from 'react-router-dom'
+import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, Building2, Store,
-  ShieldCheck, ChevronRight, LogOut
+  ShieldCheck, ChevronRight, LogOut, Lock
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { apiService } from '../../services/api'
@@ -10,6 +10,7 @@ import { apiService } from '../../services/api'
 export const Sidebar = () => {
   const { user, logout } = useAuth()
   const location = useLocation()
+  const navigate = useNavigate()
   const [pendingCounts, setPendingCounts] = useState({ orgs: 0, vendors: 0 })
 
   useEffect(() => {
@@ -44,6 +45,12 @@ export const Sidebar = () => {
       path:  '/approvals/vendors',
       icon:  Store,
       badge: pendingCounts.vendors,
+    },
+    {
+      name:  'Security & Profile',
+      path:  '/security',
+      icon:  Lock,
+      badge: null,
     },
   ]
 
@@ -99,16 +106,19 @@ export const Sidebar = () => {
 
       {/* Admin Profile Footer */}
       <div className="p-3 border-t border-gray-100">
-        <div className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors">
+        <div
+          onClick={() => navigate('/security')}
+          className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 hover:bg-green-50/60 cursor-pointer transition-colors group border border-transparent hover:border-green-200"
+        >
           <div className="w-8 h-8 rounded-xl bg-green-100 flex items-center justify-center text-green-700 font-bold text-sm shrink-0">
             {(user?.name || 'A').charAt(0)}
           </div>
           <div className="flex-1 min-w-0">
-            <div className="text-xs font-semibold text-gray-900 truncate">{user?.name || 'Super Admin'}</div>
+            <div className="text-xs font-semibold text-gray-900 truncate group-hover:text-green-700">{user?.name || 'Super Admin'}</div>
             <div className="text-[10px] text-gray-400 truncate">{user?.email || 'admin@procurehub.com'}</div>
           </div>
           <button
-            onClick={logout}
+            onClick={(e) => { e.stopPropagation(); logout() }}
             title="Sign Out"
             className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
           >
