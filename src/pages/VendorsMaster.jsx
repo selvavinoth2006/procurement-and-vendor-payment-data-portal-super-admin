@@ -23,6 +23,18 @@ export const VendorsMaster = () => {
     const updated = await apiService.createVendor(formData)
     setVendors(updated)
   }
+  const handleApprove = async (id) => {
+    const updated = await apiService.updateVendorStatus(id, 'Active')
+    setVendors(updated)
+  }
+  const handleWarn = async (id, reason) => {
+    const updated = await apiService.updateVendorStatus(id, 'Warned', reason)
+    setVendors(updated)
+  }
+  const handleRemove = async (id) => {
+    const updated = await apiService.updateVendorStatus(id, 'Deactivated')
+    setVendors(updated)
+  }
 
   const categories = ['All', ...new Set(vendors.map(v => v.category).filter(Boolean))]
   const filteredVendors = vendors.filter(v => {
@@ -96,7 +108,7 @@ export const VendorsMaster = () => {
                       <span className="text-xs font-bold text-gray-700">{vendor.rating || 0}%</span>
                     </div>
                   </td>
-                  <td><span className={vendor.status === 'Approved' ? 'badge-approved' : vendor.status === 'Rejected' ? 'badge-rejected' : 'badge-pending'}>{vendor.status}</span></td>
+                  <td><span className={(vendor.status === 'Active' || vendor.status === 'Approved') ? 'badge-approved' : (vendor.status === 'Deactivated' || vendor.status === 'Removed' || vendor.status === 'Rejected') ? 'badge-rejected' : 'badge-pending'}>{(vendor.status === 'Approved' || vendor.status === 'Active') ? 'Active' : (vendor.status === 'Rejected' || vendor.status === 'Deactivated' || vendor.status === 'Removed') ? 'Deactivated' : vendor.status}</span></td>
                   <td className="text-right">
                     <button onClick={() => { setInspectVendor(vendor); setDetailsModalOpen(true) }} className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-50 hover:bg-green-50 border border-gray-200 hover:border-green-200 rounded-xl text-xs font-medium text-gray-600 hover:text-green-700 transition-colors">
                       <Eye className="w-3.5 h-3.5" /> View
@@ -114,7 +126,7 @@ export const VendorsMaster = () => {
             <div key={vendor.id} className="card-hover p-5 space-y-4 flex flex-col justify-between">
               <div className="flex items-start justify-between">
                 <div className="w-10 h-10 rounded-xl bg-teal-50 border border-teal-100 flex items-center justify-center text-teal-600"><Store className="w-5 h-5" /></div>
-                <span className={vendor.status === 'Approved' ? 'badge-approved' : vendor.status === 'Rejected' ? 'badge-rejected' : 'badge-pending'}>{vendor.status}</span>
+                <span className={(vendor.status === 'Active' || vendor.status === 'Approved') ? 'badge-approved' : (vendor.status === 'Deactivated' || vendor.status === 'Removed' || vendor.status === 'Rejected') ? 'badge-rejected' : 'badge-pending'}>{(vendor.status === 'Approved' || vendor.status === 'Active') ? 'Active' : (vendor.status === 'Rejected' || vendor.status === 'Deactivated' || vendor.status === 'Removed') ? 'Deactivated' : vendor.status}</span>
               </div>
               <div>
                 <h3 className="font-bold text-gray-900 text-base">{vendor.name}</h3>
@@ -138,7 +150,15 @@ export const VendorsMaster = () => {
         </div>
       )}
 
-      <DetailsViewModal isOpen={detailsModalOpen} onClose={() => setDetailsModalOpen(false)} data={inspectVendor} type="vendor" />
+      <DetailsViewModal
+        isOpen={detailsModalOpen}
+        onClose={() => setDetailsModalOpen(false)}
+        data={inspectVendor}
+        type="vendor"
+        onApprove={handleApprove}
+        onWarn={handleWarn}
+        onRemove={handleRemove}
+      />
       <AddVendorModal isOpen={addModalOpen} onClose={() => setAddModalOpen(false)} onCreated={handleCreateVendor} />
     </div>
   )

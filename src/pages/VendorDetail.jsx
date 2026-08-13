@@ -119,10 +119,10 @@ export const VendorDetail = () => {
               {vendor.category}
             </span>
             <span className={
-              vendor.status === 'Approved' ? 'badge-approved text-sm px-3 py-1' :
-              vendor.status === 'Rejected' ? 'badge-rejected text-sm px-3 py-1' : 'badge-pending text-sm px-3 py-1'
+              (vendor.status === 'Active' || vendor.status === 'Approved') ? 'badge-approved text-sm px-3 py-1' :
+              (vendor.status === 'Deactivated' || vendor.status === 'Removed' || vendor.status === 'Rejected') ? 'badge-rejected text-sm px-3 py-1' : 'badge-pending text-sm px-3 py-1'
             }>
-              {vendor.status}
+              {(vendor.status === 'Approved' || vendor.status === 'Active') ? 'Active' : (vendor.status === 'Rejected' || vendor.status === 'Deactivated' || vendor.status === 'Removed') ? 'Deactivated' : vendor.status}
             </span>
           </div>
           <p className="page-sub">Supplier ID: {vendor.id} · Key Contact: {vendor.contact_person || 'N/A'}</p>
@@ -238,8 +238,8 @@ export const VendorDetail = () => {
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-gray-400 text-xs">Governance Status:</span>
-                  <span className={vendor.status === 'Approved' ? 'badge-approved' : vendor.status === 'Rejected' ? 'badge-rejected' : 'badge-pending'}>
-                    {vendor.status}
+                  <span className={(vendor.status === 'Active' || vendor.status === 'Approved') ? 'badge-approved' : (vendor.status === 'Deactivated' || vendor.status === 'Removed' || vendor.status === 'Rejected') ? 'badge-rejected' : 'badge-pending'}>
+                    {(vendor.status === 'Approved' || vendor.status === 'Active') ? 'Active' : (vendor.status === 'Rejected' || vendor.status === 'Deactivated' || vendor.status === 'Removed') ? 'Deactivated' : vendor.status}
                   </span>
                 </div>
                 {vendor.rejection_reason && (

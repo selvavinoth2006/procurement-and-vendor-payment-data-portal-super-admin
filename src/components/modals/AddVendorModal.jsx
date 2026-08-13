@@ -23,7 +23,7 @@ export const AddVendorModal = ({ isOpen, onClose, onCreated }) => {
     gstin: '',
     pan: '',
     address: '',
-    status: 'Approved'
+    status: 'Active'
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
@@ -39,7 +39,7 @@ export const AddVendorModal = ({ isOpen, onClose, onCreated }) => {
         gstin: '',
         pan: '',
         address: '',
-        status: 'Approved'
+        status: 'Active'
       })
       setError('')
     }
@@ -232,12 +232,12 @@ export const AddVendorModal = ({ isOpen, onClose, onCreated }) => {
                     <input
                       type="radio"
                       name="status"
-                      value="Approved"
-                      checked={formData.status === 'Approved'}
+                      value="Active"
+                      checked={formData.status === 'Active' || formData.status === 'Approved'}
                       onChange={handleChange}
                       className="w-4 h-4 text-teal-600 focus:ring-teal-500"
                     />
-                    <span className="px-3 py-1 rounded-lg bg-teal-100 text-teal-800 border border-teal-200 font-bold">Approved</span>
+                    <span className="px-3 py-1 rounded-lg bg-teal-100 text-teal-800 border border-teal-200 font-bold">Active</span>
                   </label>
                   <label className="flex items-center gap-2 text-xs font-semibold text-slate-800 cursor-pointer">
                     <input

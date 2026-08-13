@@ -23,7 +23,7 @@ export const AddOrganizationModal = ({ isOpen, onClose, onCreated }) => {
     industry: INDUSTRIES[0],
     gstin: '',
     address: '',
-    status: 'Approved'
+    status: 'Active'
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
@@ -38,7 +38,7 @@ export const AddOrganizationModal = ({ isOpen, onClose, onCreated }) => {
         industry: INDUSTRIES[0],
         gstin: '',
         address: '',
-        status: 'Approved'
+        status: 'Active'
       })
       setError('')
     }
@@ -216,12 +216,12 @@ export const AddOrganizationModal = ({ isOpen, onClose, onCreated }) => {
                     <input
                       type="radio"
                       name="status"
-                      value="Approved"
-                      checked={formData.status === 'Approved'}
+                      value="Active"
+                      checked={formData.status === 'Active' || formData.status === 'Approved'}
                       onChange={handleChange}
                       className="w-4 h-4 text-green-600 focus:ring-green-500"
                     />
-                    <span className="px-3 py-1 rounded-lg bg-green-100 text-green-800 border border-green-200 font-bold">Approved</span>
+                    <span className="px-3 py-1 rounded-lg bg-green-100 text-green-800 border border-green-200 font-bold">Active</span>
                   </label>
                   <label className="flex items-center gap-2 text-xs font-semibold text-slate-800 cursor-pointer">
                     <input

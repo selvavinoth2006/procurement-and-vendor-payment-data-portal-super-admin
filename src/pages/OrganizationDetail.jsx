@@ -129,10 +129,10 @@ export const OrganizationDetail = () => {
               {org.industry}
             </span>
             <span className={
-              org.status === 'Approved' ? 'badge-approved text-sm px-3 py-1' :
-              org.status === 'Rejected' ? 'badge-rejected text-sm px-3 py-1' : 'badge-pending text-sm px-3 py-1'
+              (org.status === 'Active' || org.status === 'Approved') ? 'badge-approved text-sm px-3 py-1' :
+              (org.status === 'Deactivated' || org.status === 'Removed' || org.status === 'Rejected') ? 'badge-rejected text-sm px-3 py-1' : 'badge-pending text-sm px-3 py-1'
             }>
-              {org.status}
+              {(org.status === 'Approved' || org.status === 'Active') ? 'Active' : (org.status === 'Rejected' || org.status === 'Deactivated' || org.status === 'Removed') ? 'Deactivated' : org.status}
             </span>
           </div>
           <p className="page-sub">Org ID: {org.id} · Contact Email: {org.email} · GSTIN: {org.gstin || 'N/A'}</p>
@@ -214,6 +214,10 @@ export const OrganizationDetail = () => {
                   <span className="font-semibold text-gray-800">{org.name}</span>
                 </div>
                 <div className="flex items-center justify-between">
+                  <span className="text-gray-400 text-xs">Contact Person Name:</span>
+                  <span className="font-semibold text-gray-800">{org.contact_person || org.contactPerson || org.contact_name || 'N/A'}</span>
+                </div>
+                <div className="flex items-center justify-between">
                   <span className="text-gray-400 text-xs">Email Address:</span>
                   <span className="font-medium text-gray-700">{org.email}</span>
                 </div>
@@ -248,8 +252,8 @@ export const OrganizationDetail = () => {
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-gray-400 text-xs">Governance Status:</span>
-                  <span className={org.status === 'Approved' ? 'badge-approved' : org.status === 'Rejected' ? 'badge-rejected' : 'badge-pending'}>
-                    {org.status}
+                  <span className={(org.status === 'Active' || org.status === 'Approved') ? 'badge-approved' : (org.status === 'Deactivated' || org.status === 'Removed' || org.status === 'Rejected') ? 'badge-rejected' : 'badge-pending'}>
+                    {(org.status === 'Approved' || org.status === 'Active') ? 'Active' : (org.status === 'Rejected' || org.status === 'Deactivated' || org.status === 'Removed') ? 'Deactivated' : org.status}
                   </span>
                 </div>
                 {org.rejection_reason && (

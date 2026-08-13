@@ -28,10 +28,25 @@ export const OrganizationsMaster = () => {
     const updated = await apiService.createOrganization(formData)
     setOrganizations(updated)
   }
+  const handleApprove = async (id) => {
+    const updated = await apiService.updateOrgStatus(id, 'Active')
+    setOrganizations(updated)
+  }
+  const handleWarn = async (id, reason) => {
+    const updated = await apiService.updateOrgStatus(id, 'Warned', reason)
+    setOrganizations(updated)
+  }
+  const handleRemove = async (id) => {
+    const updated = await apiService.updateOrgStatus(id, 'Deactivated')
+    setOrganizations(updated)
+  }
 
   const industries = ['All', ...new Set(organizations.map(o => o.industry).filter(Boolean))]
   const filteredOrgs = organizations.filter(org => {
-    const matchesStatus   = statusFilter === 'All' || org.status === statusFilter
+    const matchesStatus   = statusFilter === 'All' ||
+      (statusFilter === 'Active' && (org.status === 'Active' || org.status === 'Approved')) ||
+      (statusFilter === 'Deactivated' && (org.status === 'Deactivated' || org.status === 'Removed' || org.status === 'Rejected')) ||
+      org.status === statusFilter
     const matchesIndustry = industryFilter === 'All' || org.industry === industryFilter
     const matchesSearch   = org.name?.toLowerCase().includes(searchTerm.toLowerCase()) || org.email?.toLowerCase().includes(searchTerm.toLowerCase()) || org.gstin?.toLowerCase().includes(searchTerm.toLowerCase())
     return matchesStatus && matchesIndustry && matchesSearch
@@ -60,9 +75,9 @@ export const OrganizationsMaster = () => {
         </div>
         <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="filter-select">
           <option value="All">All Statuses</option>
-          <option value="Approved">Approved</option>
-          <option value="Pending">Pending</option>
-          <option value="Rejected">Rejected</option>
+          <option value="Active">Active</option>
+          <option value="Warned">Warned</option>
+          <option value="Deactivated">Deactivated</option>
         </select>
         <select value={industryFilter} onChange={e => setIndustryFilter(e.target.value)} className="filter-select">
           {industries.map(ind => <option key={ind} value={ind}>Industry: {ind}</option>)}
@@ -102,7 +117,7 @@ export const OrganizationsMaster = () => {
                   <td className="font-medium text-gray-700">{org.industry}</td>
                   <td className="font-mono text-green-700 font-semibold text-xs">{org.gstin || 'N/A'}</td>
                   <td className="font-bold text-green-700">₹{(org.spend || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                  <td><span className={org.status === 'Approved' ? 'badge-approved' : org.status === 'Rejected' ? 'badge-rejected' : 'badge-pending'}>{org.status}</span></td>
+                  <td><span className={(org.status === 'Active' || org.status === 'Approved') ? 'badge-approved' : (org.status === 'Deactivated' || org.status === 'Removed' || org.status === 'Rejected') ? 'badge-rejected' : 'badge-pending'}>{(org.status === 'Approved' || org.status === 'Active') ? 'Active' : (org.status === 'Rejected' || org.status === 'Deactivated' || org.status === 'Removed') ? 'Deactivated' : org.status}</span></td>
                   <td className="text-right">
                     <button onClick={() => { setInspectOrg(org); setDetailsModalOpen(true) }} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 hover:bg-green-50 border border-gray-200 hover:border-green-200 rounded-xl text-xs font-medium text-gray-600 hover:text-green-700 transition-colors">
                       <Eye className="w-3.5 h-3.5" /> View Details
@@ -131,6 +146,16 @@ export const OrganizationsMaster = () => {
         onReject={async (org) => {
           const orgId = typeof org === 'object' ? org.id : org
           const updated = await apiService.updateOrgStatus(orgId, 'Rejected', 'Status changed via Details View')
+          setOrganizations(updated)
+          setDetailsModalOpen(false)
+        }}
+        onWarn={async (id, reason) => {
+          const updated = await apiService.updateOrgStatus(id, 'Warned', reason)
+          setOrganizations(updated)
+          setDetailsModalOpen(false)
+        }}
+        onRemove={async (id) => {
+          const updated = await apiService.updateOrgStatus(id, 'Deactivated')
           setOrganizations(updated)
           setDetailsModalOpen(false)
         }}

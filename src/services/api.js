@@ -131,8 +131,8 @@ export const apiService = {
         return {
           ...org,
           status,
-          rejection_reason: status === 'Approved' ? null : rejection_reason,
-          spend: status === 'Approved' ? (org.spend || 0.00) : 0.00
+          rejection_reason: (status === 'Approved' || status === 'Active') ? null : rejection_reason,
+          spend: (status === 'Approved' || status === 'Active') ? (org.spend || 0.00) : 0.00
         }
       }
       return org
@@ -140,9 +140,9 @@ export const apiService = {
 
     setLocalData('organizations', updated)
     this.addActivity({
-      title: status === 'Approved' ? 'Organization Approved' : 'Organization Rejected',
+      title: (status === 'Approved' || status === 'Active') ? 'Organization Activated' : 'Organization Deactivated',
       description: `Organization status changed to ${status}${rejection_reason ? `: ${rejection_reason}` : ''}`,
-      type: status === 'Approved' ? 'approval' : 'rejection'
+      type: (status === 'Approved' || status === 'Active') ? 'approval' : 'rejection'
     })
     return this.getOrganizations()
   },
@@ -157,7 +157,7 @@ export const apiService = {
       industry: data.industry || 'Information Technology',
       gstin: data.gstin || '',
       address: data.address || '',
-      status: data.status || 'Approved',
+      status: data.status || 'Active',
       created_at: new Date().toISOString(),
       rejection_reason: null,
       spend: 0.00,
@@ -270,7 +270,7 @@ export const apiService = {
         return {
           ...vendor,
           status,
-          rejection_reason: status === 'Approved' ? null : rejection_reason
+          rejection_reason: (status === 'Approved' || status === 'Active') ? null : rejection_reason
         }
       }
       return vendor
@@ -278,9 +278,9 @@ export const apiService = {
 
     setLocalData('vendors', updated)
     this.addActivity({
-      title: status === 'Approved' ? 'Vendor Approved' : 'Vendor Rejected',
+      title: (status === 'Approved' || status === 'Active') ? 'Vendor Activated' : 'Vendor Deactivated',
       description: `Supplier status set to ${status}${rejection_reason ? `: ${rejection_reason}` : ''}`,
-      type: status === 'Approved' ? 'approval' : 'rejection'
+      type: (status === 'Approved' || status === 'Active') ? 'approval' : 'rejection'
     })
     return this.getVendors()
   },
@@ -296,7 +296,7 @@ export const apiService = {
       gstin: data.gstin || '',
       pan: data.pan || '',
       address: data.address || '',
-      status: data.status || 'Approved',
+      status: data.status || 'Active',
       created_at: new Date().toISOString(),
       rejection_reason: null,
       rating: 100,

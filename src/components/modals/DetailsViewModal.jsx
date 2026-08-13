@@ -1,12 +1,17 @@
 import React from 'react'
 import { createPortal } from 'react-dom'
-import { X, Building2, Store, Mail, Phone, MapPin, ShieldCheck, XCircle, CheckCircle2, User, CreditCard } from 'lucide-react'
+import { X, Building2, Store, Mail, Phone, MapPin, ShieldCheck, XCircle, CheckCircle2, User, CreditCard, AlertTriangle, Trash2 } from 'lucide-react'
+import { WarningModal } from './WarningModal'
+import { useState } from 'react'
 
-export const DetailsViewModal = ({ isOpen, onClose, data, type = 'organization', onApprove, onReject }) => {
+export const DetailsViewModal = ({ isOpen, onClose, data, type = 'organization', onApprove, onReject, onWarn, onRemove }) => {
+  const [warningModalOpen, setWarningModalOpen] = useState(false)
   if (!isOpen || !data) return null
   const isOrg = type === 'organization'
 
   return createPortal(
+    <>
+      
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto">
       <div className="w-full max-w-4xl bg-white rounded-2xl shadow-2xl border border-slate-100 flex flex-col max-h-[92vh] overflow-hidden my-auto relative z-[10000] animate-fade-in">
 
@@ -22,10 +27,10 @@ export const DetailsViewModal = ({ isOpen, onClose, data, type = 'organization',
               <div className="flex items-center gap-2.5">
                 <h3 className="text-xl font-bold text-slate-900 leading-tight">{data.name}</h3>
                 <span className={
-                  data.status === 'Approved' ? 'badge-approved' :
-                  data.status === 'Rejected' ? 'badge-rejected' : 'badge-pending'
+                  (data.status === 'Active' || data.status === 'Approved') ? 'badge-approved' :
+                  (data.status === 'Deactivated' || data.status === 'Removed' || data.status === 'Rejected') ? 'badge-rejected' : 'badge-pending'
                 }>
-                  {data.status}
+                  {(data.status === 'Approved' || data.status === 'Active') ? 'Active' : (data.status === 'Rejected' || data.status === 'Deactivated' || data.status === 'Removed') ? 'Deactivated' : data.status}
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-0.5">
@@ -57,16 +62,50 @@ export const DetailsViewModal = ({ isOpen, onClose, data, type = 'organization',
             </div>
           )}
 
+          {data.status === 'Warned' && (
+            <div className="flex items-start gap-3 p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-medium">
+              <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+              <div>
+                <span className="font-bold block text-amber-900 mb-0.5">Entity Under Official Warning</span>
+                <span>This account has been flagged for misbehavior. Admin can deactivate if misbehavior continues.</span>
+                {data.rejection_reason && (
+                  <div className="mt-1.5 pt-1.5 border-t border-amber-200 font-normal">
+                    <strong>Reported Reason:</strong> {data.rejection_reason}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {data.status === 'Deactivated' && (
+            <div className="flex items-start gap-3 p-4 rounded-xl bg-red-50 border border-red-200 text-red-800 text-xs font-medium">
+              <XCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+              <div>
+                <span className="font-bold block text-red-900 mb-0.5">Account Deactivated</span>
+                <span>This account has been removed due to repeated misbehavior. Logins are currently blocked.</span>
+                {data.rejection_reason && (
+                  <div className="mt-1.5 pt-1.5 border-t border-red-200 font-normal">
+                    <strong>Reason for Deactivation:</strong> {data.rejection_reason}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* 2-Column Info Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
 
             {/* Contact Information Card */}
             <div className="p-5 rounded-2xl bg-slate-50/70 border border-slate-200/80 space-y-3">
               <h4 className="text-xs font-bold text-slate-600 uppercase tracking-wider flex items-center gap-2">
-                <User className="w-4 h-4 text-green-600" /> Contact Details
+                <User className="w-4 h-4 text-green-600" /> CONTACT
               </h4>
               
-              <div className="space-y-2 text-xs">
+              <div className="space-y-2.5 text-xs">
+                <div className="flex items-center gap-2 text-slate-800 font-medium">
+                  <User className="w-4 h-4 text-slate-400 shrink-0" />
+                  <span className="truncate">{data.contact_person || data.contactPerson || data.contact_name || data.contactName || 'N/A'}</span>
+                </div>
                 <div className="flex items-center gap-2 text-slate-800 font-medium">
                   <Mail className="w-4 h-4 text-slate-400 shrink-0" />
                   <span className="truncate">{data.email || 'N/A'}</span>
@@ -75,12 +114,6 @@ export const DetailsViewModal = ({ isOpen, onClose, data, type = 'organization',
                   <Phone className="w-4 h-4 text-slate-400 shrink-0" />
                   <span>{data.phone || 'N/A'}</span>
                 </div>
-                {data.contact_person && (
-                  <div className="pt-2 border-t border-slate-200/80 flex items-center justify-between">
-                    <span className="text-slate-500">Key Contact Person:</span>
-                    <span className="font-bold text-slate-900">{data.contact_person}</span>
-                  </div>
-                )}
               </div>
             </div>
 
@@ -186,7 +219,7 @@ export const DetailsViewModal = ({ isOpen, onClose, data, type = 'organization',
             Close
           </button>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             {data.status === 'Pending' && (
               <>
                 {onReject && (
@@ -215,19 +248,62 @@ export const DetailsViewModal = ({ isOpen, onClose, data, type = 'organization',
               </>
             )}
 
-            {data.status === 'Approved' && onReject && (
-              <button
-                type="button"
-                onClick={() => {
-                  onReject(data)
-                }}
-                className="flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded-xl transition-all shadow-sm"
-              >
-                <XCircle className="w-4 h-4" /> Revoke Approval
-              </button>
+            {data.status === 'Approved' && (
+              <>
+                {onWarn && (
+                  <button
+                    type="button"
+                    onClick={() => setWarningModalOpen(true)}
+                    className="flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-xl transition-all shadow-sm"
+                  >
+                    <AlertTriangle className="w-4 h-4 text-amber-600" /> Warn / Report Misbehavior
+                  </button>
+                )}
+                {onRemove && (
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      disabled
+                      className="flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold text-gray-400 bg-gray-50 border border-gray-200 rounded-xl cursor-not-allowed opacity-50"
+                      title="You must warn this entity before removing them."
+                    >
+                      <Trash2 className="w-4 h-4" /> Remove Account
+                    </button>
+                    <span className="text-[10px] text-gray-400 italic">Warn first</span>
+                  </div>
+                )}
+              </>
             )}
 
-            {data.status === 'Rejected' && onApprove && (
+            {data.status === 'Warned' && (
+              <>
+                {onWarn && (
+                  <button
+                    type="button"
+                    onClick={() => setWarningModalOpen(true)}
+                    className="flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-xl transition-all shadow-sm"
+                  >
+                    <AlertTriangle className="w-4 h-4 text-amber-600" /> Warn Again
+                  </button>
+                )}
+                {onRemove && (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (window.confirm(`Are you sure you want to remove this ${isOrg ? 'organization' : 'vendor'}? they will be deactivated and blocked from logging in.`)) {
+                        await onRemove(data.id)
+                        onClose()
+                      }
+                    }}
+                    className="flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl transition-all shadow-sm"
+                  >
+                    <Trash2 className="w-4 h-4" /> Remove Account
+                  </button>
+                )}
+              </>
+            )}
+
+            {(data.status === 'Deactivated' || data.status === 'Removed' || data.status === 'Rejected') && onApprove && (
               <button
                 type="button"
                 onClick={async () => {
@@ -236,14 +312,27 @@ export const DetailsViewModal = ({ isOpen, onClose, data, type = 'organization',
                 }}
                 className="flex items-center gap-1.5 px-6 py-2.5 text-xs font-bold text-white bg-green-600 hover:bg-green-700 rounded-xl transition-all shadow-sm"
               >
-                <CheckCircle2 className="w-4 h-4" /> Re-Approve {isOrg ? 'Organization' : 'Vendor'}
+                <CheckCircle2 className="w-4 h-4" /> Restore / Approve {isOrg ? 'Organization' : 'Vendor'}
               </button>
             )}
           </div>
         </div>
 
       </div>
-    </div>,
+    </div>
+
+      <WarningModal
+        isOpen={warningModalOpen}
+        onClose={() => setWarningModalOpen(false)}
+        onConfirm={async (reason) => {
+          if (onWarn) {
+            await onWarn(data.id, reason);
+          }
+        }}
+        entityType={isOrg ? 'Organization' : 'Vendor'}
+        entityName={data.name}
+      />
+    </>,
     document.body
   )
 }

@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react'
-import {
-  Store, CheckCircle2, XCircle, Search, Eye,
-  RefreshCw, User, FileText, Plus
-} from 'lucide-react'
+import { Store, CheckCircle2, XCircle, Search, Eye, RefreshCw, User, FileText, Plus, AlertTriangle, Trash2 } from 'lucide-react'
+import { WarningModal } from '../components/modals/WarningModal'
 import { apiService } from '../services/api'
 import { useNavigate } from 'react-router-dom'
 import { RejectionReasonModal } from '../components/modals/RejectionReasonModal'
@@ -21,6 +19,7 @@ export const VendorApprovals = () => {
   const [detailsModalOpen, setDetailsModalOpen] = useState(false)
   const [inspectVendor, setInspectVendor] = useState(null)
   const [addModalOpen, setAddModalOpen] = useState(false)
+  const [warningModalOpen, setWarningModalOpen] = useState(false)
 
   const loadVendors = async () => {
     setLoading(true)
@@ -31,24 +30,35 @@ export const VendorApprovals = () => {
   useEffect(() => { loadVendors() }, [])
 
   const handleApprove = async (id) => {
-    const updated = await apiService.updateVendorStatus(id, 'Approved')
+    const updated = await apiService.updateVendorStatus(id, 'Active')
     setVendors(updated)
   }
   const handleConfirmRejection = async (reason) => {
     if (!targetVendor) return
-    const updated = await apiService.updateVendorStatus(targetVendor.id, 'Rejected', reason)
+    const updated = await apiService.updateVendorStatus(targetVendor.id, 'Deactivated', reason)
     setVendors(updated)
   }
   const handleCreateVendor = async (formData) => {
     const updated = await apiService.createVendor(formData)
     setVendors(updated)
   }
+  const handleWarn = async (id, reason) => {
+    const updated = await apiService.updateVendorStatus(id, 'Warned', reason)
+    setVendors(updated)
+  }
+  const handleRemove = async (id) => {
+    const updated = await apiService.updateVendorStatus(id, 'Deactivated')
+    setVendors(updated)
+  }
 
-  const tabs = ['All', 'Pending', 'Approved', 'Rejected']
+  const tabs = ['All', 'Active', 'Warned', 'Deactivated']
   const categories = ['All', ...new Set(vendors.map(v => v.category).filter(Boolean))]
 
   const filtered = vendors.filter(v => {
-    const matchTab  = activeTab === 'All' || v.status === activeTab
+    const matchTab  = activeTab === 'All' ||
+      (activeTab === 'Active' && (v.status === 'Active' || v.status === 'Approved')) ||
+      (activeTab === 'Deactivated' && (v.status === 'Deactivated' || v.status === 'Removed' || v.status === 'Rejected')) ||
+      v.status === activeTab
     const matchCat  = categoryFilter === 'All' || v.category === categoryFilter
     const matchSrch = !searchTerm ||
       v.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -59,10 +69,10 @@ export const VendorApprovals = () => {
   })
 
   const counts = {
-    All:      vendors.length,
-    Pending:  vendors.filter(v => v.status === 'Pending').length,
-    Approved: vendors.filter(v => v.status === 'Approved').length,
-    Rejected: vendors.filter(v => v.status === 'Rejected').length,
+    All:         vendors.length,
+    Active:      vendors.filter(v => v.status === 'Active' || v.status === 'Approved').length,
+    Warned:      vendors.filter(v => v.status === 'Warned').length,
+    Deactivated: vendors.filter(v => v.status === 'Deactivated' || v.status === 'Removed' || v.status === 'Rejected').length,
   }
 
   return (
@@ -229,16 +239,12 @@ export const VendorApprovals = () => {
                   {/* Status */}
                   <td>
                     <span className={
-                      vendor.status === 'Approved' ? 'badge-approved' :
-                      vendor.status === 'Rejected' ? 'badge-rejected' : 'badge-pending'
+                      (vendor.status === 'Active' || vendor.status === 'Approved') ? 'badge-approved' :
+                      vendor.status === 'Warned' ? 'badge-pending' :
+                      (vendor.status === 'Deactivated' || vendor.status === 'Removed' || vendor.status === 'Rejected') ? 'badge-rejected' : 'badge-pending'
                     }>
-                      {vendor.status}
+                      {(vendor.status === 'Approved' || vendor.status === 'Active') ? 'Active' : (vendor.status === 'Rejected' || vendor.status === 'Deactivated' || vendor.status === 'Removed') ? 'Deactivated' : vendor.status}
                     </span>
-                    {vendor.status === 'Rejected' && vendor.rejection_reason && (
-                      <p className="text-[10px] text-red-500 mt-0.5 max-w-[120px] truncate" title={vendor.rejection_reason}>
-                        {vendor.rejection_reason}
-                      </p>
-                    )}
                   </td>
 
                   {/* Actions */}
@@ -251,36 +257,69 @@ export const VendorApprovals = () => {
                         <Eye className="w-3.5 h-3.5" /> View Details
                       </button>
 
+                      {/* Activate / Deactivate / Warn based on status */}
                       {vendor.status === 'Pending' && (
                         <>
                           <button
-                            onClick={() => { setTargetVendor(vendor); setRejectModalOpen(true) }}
+                            onClick={() => handleRemove(vendor.id)}
                             className="flex items-center gap-1 px-3 py-1.5 bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 rounded-xl text-xs font-semibold transition-colors"
                           >
-                            <XCircle className="w-3.5 h-3.5" /> Reject
+                            <XCircle className="w-3.5 h-3.5" /> Deactivate
                           </button>
                           <button
                             onClick={() => handleApprove(vendor.id)}
                             className="flex items-center gap-1 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-xl text-xs font-semibold transition-colors"
                           >
-                            <CheckCircle2 className="w-3.5 h-3.5" /> Approve
+                            <CheckCircle2 className="w-3.5 h-3.5" /> Activate
                           </button>
                         </>
                       )}
-                      {vendor.status === 'Approved' && (
-                        <button
-                          onClick={() => { setTargetVendor(vendor); setRejectModalOpen(true) }}
-                          className="px-3 py-1.5 bg-red-50 hover:bg-red-100 border border-red-200 text-red-500 rounded-xl text-xs font-semibold transition-colors"
-                        >
-                          Revoke
-                        </button>
+                      {(vendor.status === 'Approved' || vendor.status === 'Active') && (
+                        <>
+                          <button
+                            onClick={() => { setTargetVendor(vendor); setWarningModalOpen(true) }}
+                            className="flex items-center gap-1 px-3 py-1.5 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-700 rounded-xl text-xs font-semibold transition-colors"
+                          >
+                            <AlertTriangle className="w-3.5 h-3.5" /> Warn
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (window.confirm("Are you sure you want to deactivate this vendor? Logins will be blocked.")) {
+                                handleRemove(vendor.id)
+                              }
+                            }}
+                            className="flex items-center gap-1 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-semibold transition-colors"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" /> Deactivate
+                          </button>
+                        </>
                       )}
-                      {vendor.status === 'Rejected' && (
+                      {vendor.status === 'Warned' && (
+                        <>
+                          <button
+                            onClick={() => { setTargetVendor(vendor); setWarningModalOpen(true) }}
+                            className="flex items-center gap-1 px-3 py-1.5 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-700 rounded-xl text-xs font-semibold transition-colors"
+                          >
+                            <AlertTriangle className="w-3.5 h-3.5" /> Warn Again
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (window.confirm("Are you sure you want to deactivate this vendor? Logins will be blocked.")) {
+                                handleRemove(vendor.id)
+                              }
+                            }}
+                            className="flex items-center gap-1 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-semibold transition-colors"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" /> Deactivate
+                          </button>
+                        </>
+                      )}
+                      {(vendor.status === 'Deactivated' || vendor.status === 'Removed' || vendor.status === 'Rejected') && (
                         <button
                           onClick={() => handleApprove(vendor.id)}
                           className="px-3 py-1.5 bg-green-50 hover:bg-green-100 border border-green-200 text-green-700 rounded-xl text-xs font-semibold transition-colors"
                         >
-                          Re-Approve
+                          Activate
                         </button>
                       )}
                     </div>
@@ -297,7 +336,7 @@ export const VendorApprovals = () => {
                 <span className="font-semibold text-gray-700">{vendors.length}</span> vendors
               </span>
               <span className="text-xs text-gray-400">
-                {counts.Pending} pending · {counts.Approved} approved · {counts.Rejected} rejected
+                {counts.Active} active · {counts.Warned} warned · {counts.Deactivated} deactivated
               </span>
             </div>
           )}
@@ -311,7 +350,7 @@ export const VendorApprovals = () => {
         entityType="Vendor"
         entityName={targetVendor?.name}
       />
-      <DetailsViewModal
+            <DetailsViewModal
         isOpen={detailsModalOpen}
         onClose={() => setDetailsModalOpen(false)}
         data={inspectVendor}
@@ -322,6 +361,24 @@ export const VendorApprovals = () => {
           setTargetVendor(vendor)
           setRejectModalOpen(true)
         }}
+        onWarn={handleWarn}
+        onRemove={handleRemove}
+      />
+
+      <WarningModal
+        isOpen={warningModalOpen}
+        onClose={() => setWarningModalOpen(false)}
+        onConfirm={handleWarn}
+        entityType="Vendor"
+        entityName={targetVendor?.name || inspectVendor?.name}
+      />
+
+      <WarningModal
+        isOpen={warningModalOpen}
+        onClose={() => setWarningModalOpen(false)}
+        onConfirm={handleWarn}
+        entityType="Vendor"
+        entityName={targetVendor?.name || inspectVendor?.name}
       />
       <AddVendorModal
         key={addModalOpen ? 'add-vendor-open' : 'add-vendor-closed'}

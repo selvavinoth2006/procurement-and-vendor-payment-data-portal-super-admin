@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react'
-import {
-  Building2, CheckCircle2, XCircle, Search, Eye,
-  RefreshCw, ChevronDown, Filter, Plus
-} from 'lucide-react'
+import { Building2, CheckCircle2, XCircle, Search, Eye, RefreshCw, ChevronDown, Filter, Plus, AlertTriangle, Trash2 } from 'lucide-react'
+import { WarningModal } from '../components/modals/WarningModal'
 import { apiService } from '../services/api'
 import { useNavigate } from 'react-router-dom'
 import { RejectionReasonModal } from '../components/modals/RejectionReasonModal'
@@ -21,6 +19,7 @@ export const OrgApprovals = () => {
   const [detailsModalOpen, setDetailsModalOpen] = useState(false)
   const [inspectOrg, setInspectOrg] = useState(null)
   const [addModalOpen, setAddModalOpen] = useState(false)
+  const [warningModalOpen, setWarningModalOpen] = useState(false)
 
   const loadOrganizations = async () => {
     setLoading(true)
@@ -31,24 +30,35 @@ export const OrgApprovals = () => {
   useEffect(() => { loadOrganizations() }, [])
 
   const handleApprove = async (id) => {
-    const updated = await apiService.updateOrgStatus(id, 'Approved')
+    const updated = await apiService.updateOrgStatus(id, 'Active')
     setOrganizations(updated)
   }
   const handleConfirmRejection = async (reason) => {
     if (!targetOrg) return
-    const updated = await apiService.updateOrgStatus(targetOrg.id, 'Rejected', reason)
+    const updated = await apiService.updateOrgStatus(targetOrg.id, 'Deactivated', reason)
     setOrganizations(updated)
   }
   const handleCreateOrg = async (formData) => {
     const updated = await apiService.createOrganization(formData)
     setOrganizations(updated)
   }
+  const handleWarn = async (id, reason) => {
+    const updated = await apiService.updateOrgStatus(id, 'Warned', reason)
+    setOrganizations(updated)
+  }
+  const handleRemove = async (id) => {
+    const updated = await apiService.updateOrgStatus(id, 'Deactivated')
+    setOrganizations(updated)
+  }
 
-  const tabs = ['All', 'Pending', 'Approved', 'Rejected']
+  const tabs = ['All', 'Active', 'Warned', 'Deactivated']
   const industries = ['All', ...new Set(organizations.map(o => o.industry).filter(Boolean))]
 
   const filtered = organizations.filter(org => {
-    const matchTab  = activeTab === 'All' || org.status === activeTab
+    const matchTab  = activeTab === 'All' ||
+      (activeTab === 'Active' && (org.status === 'Active' || org.status === 'Approved')) ||
+      (activeTab === 'Deactivated' && (org.status === 'Deactivated' || org.status === 'Removed' || org.status === 'Rejected')) ||
+      org.status === activeTab
     const matchInd  = industryFilter === 'All' || org.industry === industryFilter
     const matchSrch = !searchTerm ||
       org.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -58,10 +68,10 @@ export const OrgApprovals = () => {
   })
 
   const counts = {
-    All:      organizations.length,
-    Pending:  organizations.filter(o => o.status === 'Pending').length,
-    Approved: organizations.filter(o => o.status === 'Approved').length,
-    Rejected: organizations.filter(o => o.status === 'Rejected').length,
+    All:         organizations.length,
+    Active:      organizations.filter(o => o.status === 'Active' || o.status === 'Approved').length,
+    Warned:      organizations.filter(o => o.status === 'Warned').length,
+    Deactivated: organizations.filter(o => o.status === 'Deactivated' || o.status === 'Removed' || o.status === 'Rejected').length,
   }
 
   return (
@@ -200,16 +210,12 @@ export const OrgApprovals = () => {
                   {/* Status */}
                   <td>
                     <span className={
-                      org.status === 'Approved' ? 'badge-approved' :
-                      org.status === 'Rejected' ? 'badge-rejected' : 'badge-pending'
+                      (org.status === 'Active' || org.status === 'Approved') ? 'badge-approved' :
+                      org.status === 'Warned' ? 'badge-pending' :
+                      (org.status === 'Deactivated' || org.status === 'Removed' || org.status === 'Rejected') ? 'badge-rejected' : 'badge-pending'
                     }>
-                      {org.status}
+                      {(org.status === 'Approved' || org.status === 'Active') ? 'Active' : (org.status === 'Rejected' || org.status === 'Deactivated' || org.status === 'Removed') ? 'Deactivated' : org.status}
                     </span>
-                    {org.status === 'Rejected' && org.rejection_reason && (
-                      <p className="text-[10px] text-red-500 mt-0.5 max-w-[120px] truncate" title={org.rejection_reason}>
-                        {org.rejection_reason}
-                      </p>
-                    )}
                   </td>
 
                   {/* Actions */}
@@ -223,37 +229,69 @@ export const OrgApprovals = () => {
                         <Eye className="w-3.5 h-3.5" /> View Details
                       </button>
 
-                      {/* Approve / Reject based on status */}
+                      {/* Activate / Deactivate / Warn based on status */}
                       {org.status === 'Pending' && (
                         <>
                           <button
-                            onClick={() => { setTargetOrg(org); setRejectModalOpen(true) }}
+                            onClick={() => handleRemove(org.id)}
                             className="flex items-center gap-1 px-3 py-1.5 bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 rounded-xl text-xs font-semibold transition-colors"
                           >
-                            <XCircle className="w-3.5 h-3.5" /> Reject
+                            <XCircle className="w-3.5 h-3.5" /> Deactivate
                           </button>
                           <button
                             onClick={() => handleApprove(org.id)}
                             className="flex items-center gap-1 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-xl text-xs font-semibold transition-colors"
                           >
-                            <CheckCircle2 className="w-3.5 h-3.5" /> Approve
+                            <CheckCircle2 className="w-3.5 h-3.5" /> Activate
                           </button>
                         </>
                       )}
-                      {org.status === 'Approved' && (
-                        <button
-                          onClick={() => { setTargetOrg(org); setRejectModalOpen(true) }}
-                          className="px-3 py-1.5 bg-red-50 hover:bg-red-100 border border-red-200 text-red-500 rounded-xl text-xs font-semibold transition-colors"
-                        >
-                          Revoke
-                        </button>
+                      {(org.status === 'Approved' || org.status === 'Active') && (
+                        <>
+                          <button
+                            onClick={() => { setTargetOrg(org); setWarningModalOpen(true) }}
+                            className="flex items-center gap-1 px-3 py-1.5 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-700 rounded-xl text-xs font-semibold transition-colors"
+                          >
+                            <AlertTriangle className="w-3.5 h-3.5" /> Warn
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (window.confirm("Are you sure you want to deactivate this org? Logins will be blocked.")) {
+                                handleRemove(org.id)
+                              }
+                            }}
+                            className="flex items-center gap-1 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-semibold transition-colors"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" /> Deactivate
+                          </button>
+                        </>
                       )}
-                      {org.status === 'Rejected' && (
+                      {org.status === 'Warned' && (
+                        <>
+                          <button
+                            onClick={() => { setTargetOrg(org); setWarningModalOpen(true) }}
+                            className="flex items-center gap-1 px-3 py-1.5 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-700 rounded-xl text-xs font-semibold transition-colors"
+                          >
+                            <AlertTriangle className="w-3.5 h-3.5" /> Warn Again
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (window.confirm("Are you sure you want to deactivate this org? Logins will be blocked.")) {
+                                handleRemove(org.id)
+                              }
+                            }}
+                            className="flex items-center gap-1 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-semibold transition-colors"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" /> Deactivate
+                          </button>
+                        </>
+                      )}
+                      {(org.status === 'Deactivated' || org.status === 'Removed' || org.status === 'Rejected') && (
                         <button
                           onClick={() => handleApprove(org.id)}
                           className="px-3 py-1.5 bg-green-50 hover:bg-green-100 border border-green-200 text-green-700 rounded-xl text-xs font-semibold transition-colors"
                         >
-                          Re-Approve
+                          Activate
                         </button>
                       )}
                     </div>
@@ -271,7 +309,7 @@ export const OrgApprovals = () => {
                 <span className="font-semibold text-gray-700">{organizations.length}</span> organizations
               </span>
               <span className="text-xs text-gray-400">
-                {counts.Pending} pending · {counts.Approved} approved · {counts.Rejected} rejected
+                {counts.Active} active · {counts.Warned} warned · {counts.Deactivated} deactivated
               </span>
             </div>
           )}
@@ -285,7 +323,7 @@ export const OrgApprovals = () => {
         entityType="Organization"
         entityName={targetOrg?.name}
       />
-      <DetailsViewModal
+            <DetailsViewModal
         isOpen={detailsModalOpen}
         onClose={() => setDetailsModalOpen(false)}
         data={inspectOrg}
@@ -296,6 +334,16 @@ export const OrgApprovals = () => {
           setTargetOrg(org)
           setRejectModalOpen(true)
         }}
+        onWarn={handleWarn}
+        onRemove={handleRemove}
+      />
+
+      <WarningModal
+        isOpen={warningModalOpen}
+        onClose={() => setWarningModalOpen(false)}
+        onConfirm={handleWarn}
+        entityType="Org"
+        entityName={targetOrg?.name || inspectOrg?.name}
       />
       <AddOrganizationModal
         key={addModalOpen ? 'add-org-open' : 'add-org-closed'}
