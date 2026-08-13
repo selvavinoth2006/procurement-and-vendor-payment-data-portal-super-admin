@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react'
-import { Store, CheckCircle2, XCircle, Search, Eye, RefreshCw, User, FileText, Plus, AlertTriangle, Trash2 } from 'lucide-react'
+import { Store, CheckCircle2, XCircle, Search, Eye, RefreshCw, User, FileText, Plus, AlertTriangle, Trash2, Activity, RotateCcw } from 'lucide-react'
 import { WarningModal } from '../components/modals/WarningModal'
+import { DeactivateModal } from '../components/modals/DeactivateModal'
+import { ActivityTrailModal } from '../components/modals/ActivityTrailModal'
+import { ReactivationRequestsPanel } from '../components/ReactivationRequestsPanel'
 import { apiService } from '../services/api'
 import { useNavigate } from 'react-router-dom'
-import { RejectionReasonModal } from '../components/modals/RejectionReasonModal'
 import { DetailsViewModal } from '../components/modals/DetailsViewModal'
 import { AddVendorModal } from '../components/modals/AddVendorModal'
 
@@ -14,12 +16,14 @@ export const VendorApprovals = () => {
   const [activeTab, setActiveTab] = useState('All')
   const [searchTerm, setSearchTerm] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('All')
-  const [rejectModalOpen, setRejectModalOpen] = useState(false)
   const [targetVendor, setTargetVendor] = useState(null)
   const [detailsModalOpen, setDetailsModalOpen] = useState(false)
   const [inspectVendor, setInspectVendor] = useState(null)
   const [addModalOpen, setAddModalOpen] = useState(false)
   const [warningModalOpen, setWarningModalOpen] = useState(false)
+  const [deactivateModalOpen, setDeactivateModalOpen] = useState(false)
+  const [activityModalOpen, setActivityModalOpen] = useState(false)
+  const [selectedUser, setSelectedUser] = useState(null)
 
   const loadVendors = async () => {
     setLoading(true)
@@ -33,31 +37,29 @@ export const VendorApprovals = () => {
     const updated = await apiService.updateVendorStatus(id, 'Active')
     setVendors(updated)
   }
-  const handleConfirmRejection = async (reason) => {
+  const handleWarnConfirm = async (reason) => {
     if (!targetVendor) return
-    const updated = await apiService.updateVendorStatus(targetVendor.id, 'Deactivated', reason)
+    const updated = await apiService.warnUser(targetVendor.id, 'Vendor', reason)
+    setVendors(updated)
+  }
+  const handleDeactivateConfirm = async (reason) => {
+    if (!targetVendor) return
+    const updated = await apiService.deactivateUser(targetVendor.id, 'Vendor', reason)
     setVendors(updated)
   }
   const handleCreateVendor = async (formData) => {
     const updated = await apiService.createVendor(formData)
     setVendors(updated)
   }
-  const handleWarn = async (id, reason) => {
-    const updated = await apiService.updateVendorStatus(id, 'Warned', reason)
-    setVendors(updated)
-  }
-  const handleRemove = async (id) => {
-    const updated = await apiService.updateVendorStatus(id, 'Deactivated')
-    setVendors(updated)
-  }
 
-  const tabs = ['All', 'Active', 'Warned', 'Deactivated']
+  const tabs = ['All', 'Active', 'Warned', 'Deactivated', 'Reactivation Appeals']
   const categories = ['All', ...new Set(vendors.map(v => v.category).filter(Boolean))]
 
   const filtered = vendors.filter(v => {
     const matchTab  = activeTab === 'All' ||
       (activeTab === 'Active' && (v.status === 'Active' || v.status === 'Approved')) ||
       (activeTab === 'Deactivated' && (v.status === 'Deactivated' || v.status === 'Removed' || v.status === 'Rejected')) ||
+      (activeTab === 'Reactivation Appeals' && v.reactivation_status === 'Pending') ||
       v.status === activeTab
     const matchCat  = categoryFilter === 'All' || v.category === categoryFilter
     const matchSrch = !searchTerm ||
@@ -69,10 +71,11 @@ export const VendorApprovals = () => {
   })
 
   const counts = {
-    All:         vendors.length,
-    Active:      vendors.filter(v => v.status === 'Active' || v.status === 'Approved').length,
-    Warned:      vendors.filter(v => v.status === 'Warned').length,
-    Deactivated: vendors.filter(v => v.status === 'Deactivated' || v.status === 'Removed' || v.status === 'Rejected').length,
+    All:                  vendors.length,
+    Active:               vendors.filter(v => v.status === 'Active' || v.status === 'Approved').length,
+    Warned:               vendors.filter(v => v.status === 'Warned').length,
+    Deactivated:          vendors.filter(v => v.status === 'Deactivated' || v.status === 'Removed' || v.status === 'Rejected').length,
+    'Reactivation Appeals': vendors.filter(v => v.reactivation_status === 'Pending').length
   }
 
   return (
@@ -106,12 +109,12 @@ export const VendorApprovals = () => {
 
       {/* Tabs + Filters */}
       <div className="card p-3 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-xl">
+        <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-xl flex-wrap">
           {tabs.map(tab => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5
                 ${activeTab === tab ? 'bg-green-600 text-white shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}
             >
               {tab}
@@ -144,242 +147,222 @@ export const VendorApprovals = () => {
         </div>
       </div>
 
-      {/* Table */}
-      {loading ? (
-        <div className="flex justify-center items-center h-48">
-          <div className="w-7 h-7 border-[3px] border-green-500 border-t-transparent rounded-full animate-spin" />
-        </div>
+      {/* Reactivation Requests Special Tab */}
+      {activeTab === 'Reactivation Appeals' ? (
+        <ReactivationRequestsPanel onRequestReviewed={loadVendors} />
       ) : (
-        <div className="card overflow-hidden">
-          <table className="w-full data-table">
-            <thead>
-              <tr>
-                <th>Vendor / Supplier</th>
-                <th>Category</th>
-                <th>GSTIN / PAN</th>
-                <th>Contact Person</th>
-                <th>Performance</th>
-                <th>Status</th>
-                <th className="text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.length === 0 ? (
+        /* Standard Table */
+        loading ? (
+          <div className="flex justify-center items-center h-48">
+            <div className="w-7 h-7 border-[3px] border-green-500 border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : (
+          <div className="card overflow-hidden">
+            <table className="w-full data-table">
+              <thead>
                 <tr>
-                  <td colSpan={7} className="text-center py-16">
-                    <Store className="w-10 h-10 text-gray-200 mx-auto mb-2" />
-                    <p className="text-gray-400 font-medium">No vendors found</p>
-                    <p className="text-gray-300 text-xs mt-1">No supplier registrations match the current filters</p>
-                  </td>
+                  <th>Vendor / Supplier</th>
+                  <th>Category</th>
+                  <th>GSTIN / PAN</th>
+                  <th>Contact Person</th>
+                  <th>Performance</th>
+                  <th>Status</th>
+                  <th className="text-right">Actions</th>
                 </tr>
-              ) : filtered.map(vendor => (
-                <tr
-                  key={vendor.id}
-                  onClick={() => navigate(`/vendors/${vendor.id}`)}
-                  className="cursor-pointer hover:bg-green-50/60 transition-colors"
-                >
+              </thead>
+              <tbody>
+                {filtered.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="text-center py-16">
+                      <Store className="w-10 h-10 text-gray-200 mx-auto mb-2" />
+                      <p className="text-gray-400 font-medium">No vendors found</p>
+                      <p className="text-gray-300 text-xs mt-1">No supplier registrations match the current filters</p>
+                    </td>
+                  </tr>
+                ) : filtered.map(vendor => (
+                  <tr
+                    key={vendor.id}
+                    onClick={() => navigate(`/vendors/${vendor.id}`)}
+                    className="cursor-pointer hover:bg-green-50/60 transition-colors"
+                  >
 
-                  {/* Vendor Name */}
-                  <td>
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-xl bg-teal-50 border border-teal-100 flex items-center justify-center text-teal-600 shrink-0">
-                        <Store className="w-4 h-4" />
+                    {/* Vendor Name */}
+                    <td>
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-xl bg-teal-50 border border-teal-100 flex items-center justify-center text-teal-600 shrink-0">
+                          <Store className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <div className="font-semibold text-gray-900 text-sm leading-tight">{vendor.name}</div>
+                          <div className="text-xs text-gray-400">{vendor.email}</div>
+                        </div>
                       </div>
-                      <div>
-                        <div className="font-semibold text-gray-900 text-sm leading-tight">{vendor.name}</div>
-                        <div className="text-xs text-gray-400">{vendor.email}</div>
+                    </td>
+
+                    {/* Category */}
+                    <td>
+                      <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-100">
+                        {vendor.category}
+                      </span>
+                    </td>
+
+                    {/* GSTIN / PAN */}
+                    <td>
+                      <div className="space-y-0.5">
+                        <div className="font-mono text-xs font-semibold text-green-800 bg-green-50 border border-green-100 px-2 py-0.5 rounded-lg">
+                          GST: {vendor.gstin || '—'}
+                        </div>
+                        {vendor.pan && (
+                          <div className="font-mono text-xs text-gray-500">PAN: {vendor.pan}</div>
+                        )}
                       </div>
-                    </div>
-                  </td>
+                    </td>
 
-                  {/* Category */}
-                  <td>
-                    <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-100">
-                      {vendor.category}
-                    </span>
-                  </td>
-
-                  {/* GSTIN / PAN */}
-                  <td>
-                    <div className="space-y-0.5">
-                      <div className="font-mono text-xs font-semibold text-green-800 bg-green-50 border border-green-100 px-2 py-0.5 rounded-lg">
-                        GST: {vendor.gstin || '—'}
+                    {/* Contact Person */}
+                    <td>
+                      <div className="flex items-center gap-1.5 font-medium text-gray-700 text-sm">
+                        <User className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                        {vendor.contact_person || '—'}
                       </div>
-                      {vendor.pan && (
-                        <div className="font-mono text-xs text-gray-500">PAN: {vendor.pan}</div>
-                      )}
-                    </div>
-                  </td>
+                      <div className="text-xs text-gray-400 mt-0.5 pl-5">{vendor.phone}</div>
+                    </td>
 
-                  {/* Contact Person */}
-                  <td>
-                    <div className="flex items-center gap-1.5 font-medium text-gray-700 text-sm">
-                      <User className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-                      {vendor.contact_person || '—'}
-                    </div>
-                    <div className="text-xs text-gray-400 mt-0.5 pl-5">{vendor.phone}</div>
-                  </td>
-
-                  {/* Performance */}
-                  <td>
-                    <div className="flex items-center gap-2">
-                      <div className="w-20 h-2 bg-gray-100 rounded-full overflow-hidden">
-                        <div
-                          className={`h-full rounded-full ${
-                            (vendor.rating || 0) >= 90 ? 'bg-green-500' :
-                            (vendor.rating || 0) >= 70 ? 'bg-amber-400' : 'bg-red-400'
-                          }`}
-                          style={{ width: `${vendor.rating || 0}%` }}
-                        />
+                    {/* Performance */}
+                    <td>
+                      <div className="flex items-center gap-2">
+                        <div className="w-20 h-2 bg-gray-100 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-full ${
+                              (vendor.rating || 0) >= 90 ? 'bg-green-500' :
+                              (vendor.rating || 0) >= 70 ? 'bg-amber-400' : 'bg-red-400'
+                            }`}
+                            style={{ width: `${vendor.rating || 0}%` }}
+                          />
+                        </div>
+                        <span className="text-xs font-bold text-gray-700">{vendor.rating || 0}%</span>
                       </div>
-                      <span className="text-xs font-bold text-gray-700">{vendor.rating || 0}%</span>
-                    </div>
-                  </td>
+                    </td>
 
-                  {/* Status */}
-                  <td>
-                    <span className={
-                      (vendor.status === 'Active' || vendor.status === 'Approved') ? 'badge-approved' :
-                      vendor.status === 'Warned' ? 'badge-pending' :
-                      (vendor.status === 'Deactivated' || vendor.status === 'Removed' || vendor.status === 'Rejected') ? 'badge-rejected' : 'badge-pending'
-                    }>
-                      {(vendor.status === 'Approved' || vendor.status === 'Active') ? 'Active' : (vendor.status === 'Rejected' || vendor.status === 'Deactivated' || vendor.status === 'Removed') ? 'Deactivated' : vendor.status}
-                    </span>
-                  </td>
+                    {/* Status */}
+                    <td>
+                      <div className="space-y-1">
+                        <span className={
+                          (vendor.status === 'Active' || vendor.status === 'Approved') ? 'badge-approved' :
+                          vendor.status === 'Warned' ? 'badge-pending' :
+                          (vendor.status === 'Deactivated' || vendor.status === 'Removed' || vendor.status === 'Rejected') ? 'badge-rejected' : 'badge-pending'
+                        }>
+                          {(vendor.status === 'Approved' || vendor.status === 'Active') ? 'Active' : (vendor.status === 'Rejected' || vendor.status === 'Deactivated' || vendor.status === 'Removed') ? 'Deactivated' : vendor.status}
+                        </span>
 
-                  {/* Actions */}
-                  <td onClick={(e) => e.stopPropagation()}>
-                    <div className="flex items-center justify-end gap-2">
-                      <button
-                        onClick={() => { setInspectVendor(vendor); setDetailsModalOpen(true) }}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 hover:border-green-300 hover:bg-green-50 rounded-xl text-xs font-medium text-gray-600 hover:text-green-700 transition-colors"
-                      >
-                        <Eye className="w-3.5 h-3.5" /> View Details
-                      </button>
+                        {vendor.reactivation_status === 'Pending' && (
+                          <span className="block text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-md">
+                            Reactivation Requested
+                          </span>
+                        )}
+                      </div>
+                    </td>
 
-                      {/* Activate / Deactivate / Warn based on status */}
-                      {vendor.status === 'Pending' && (
-                        <>
-                          <button
-                            onClick={() => handleRemove(vendor.id)}
-                            className="flex items-center gap-1 px-3 py-1.5 bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 rounded-xl text-xs font-semibold transition-colors"
-                          >
-                            <XCircle className="w-3.5 h-3.5" /> Deactivate
-                          </button>
-                          <button
-                            onClick={() => handleApprove(vendor.id)}
-                            className="flex items-center gap-1 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-xl text-xs font-semibold transition-colors"
-                          >
-                            <CheckCircle2 className="w-3.5 h-3.5" /> Activate
-                          </button>
-                        </>
-                      )}
-                      {(vendor.status === 'Approved' || vendor.status === 'Active') && (
-                        <>
+                    {/* Actions */}
+                    <td onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center justify-end gap-1.5 flex-wrap">
+
+                        {/* Activity Trail Button */}
+                        <button
+                          onClick={() => { setSelectedUser(vendor); setActivityModalOpen(true) }}
+                          className="flex items-center gap-1 px-2.5 py-1.5 bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-700 rounded-xl text-xs font-semibold transition-colors"
+                          title="View user recent activity trail"
+                        >
+                          <Activity className="w-3.5 h-3.5" /> Trail
+                        </button>
+
+                        {/* View Details */}
+                        <button
+                          onClick={() => { setInspectVendor(vendor); setDetailsModalOpen(true) }}
+                          className="flex items-center gap-1 px-2.5 py-1.5 bg-white border border-gray-200 hover:border-green-300 hover:bg-green-50 rounded-xl text-xs font-medium text-gray-600 hover:text-green-700 transition-colors"
+                        >
+                          <Eye className="w-3.5 h-3.5" /> Details
+                        </button>
+
+                        {/* Warn Button */}
+                        {vendor.status !== 'Deactivated' && (
                           <button
                             onClick={() => { setTargetVendor(vendor); setWarningModalOpen(true) }}
-                            className="flex items-center gap-1 px-3 py-1.5 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-700 rounded-xl text-xs font-semibold transition-colors"
+                            className="flex items-center gap-1 px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-700 rounded-xl text-xs font-semibold transition-colors"
                           >
                             <AlertTriangle className="w-3.5 h-3.5" /> Warn
                           </button>
-                          <button
-                            onClick={() => {
-                              if (window.confirm("Are you sure you want to deactivate this vendor? Logins will be blocked.")) {
-                                handleRemove(vendor.id)
-                              }
-                            }}
-                            className="flex items-center gap-1 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-semibold transition-colors"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" /> Deactivate
-                          </button>
-                        </>
-                      )}
-                      {vendor.status === 'Warned' && (
-                        <>
-                          <button
-                            onClick={() => { setTargetVendor(vendor); setWarningModalOpen(true) }}
-                            className="flex items-center gap-1 px-3 py-1.5 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-700 rounded-xl text-xs font-semibold transition-colors"
-                          >
-                            <AlertTriangle className="w-3.5 h-3.5" /> Warn Again
-                          </button>
-                          <button
-                            onClick={() => {
-                              if (window.confirm("Are you sure you want to deactivate this vendor? Logins will be blocked.")) {
-                                handleRemove(vendor.id)
-                              }
-                            }}
-                            className="flex items-center gap-1 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-semibold transition-colors"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" /> Deactivate
-                          </button>
-                        </>
-                      )}
-                      {(vendor.status === 'Deactivated' || vendor.status === 'Removed' || vendor.status === 'Rejected') && (
-                        <button
-                          onClick={() => handleApprove(vendor.id)}
-                          className="px-3 py-1.5 bg-green-50 hover:bg-green-100 border border-green-200 text-green-700 rounded-xl text-xs font-semibold transition-colors"
-                        >
-                          Activate
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                        )}
 
-          {filtered.length > 0 && (
-            <div className="px-5 py-3 border-t border-gray-100 flex items-center justify-between bg-gray-50">
-              <span className="text-xs text-gray-400">
-                Showing <span className="font-semibold text-gray-700">{filtered.length}</span> of{' '}
-                <span className="font-semibold text-gray-700">{vendors.length}</span> vendors
-              </span>
-              <span className="text-xs text-gray-400">
-                {counts.Active} active · {counts.Warned} warned · {counts.Deactivated} deactivated
-              </span>
-            </div>
-          )}
-        </div>
+                        {/* Deactivate Button */}
+                        {vendor.status !== 'Deactivated' ? (
+                          <button
+                            onClick={() => { setTargetVendor(vendor); setDeactivateModalOpen(true) }}
+                            className="flex items-center gap-1 px-2.5 py-1.5 bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 rounded-xl text-xs font-semibold transition-colors"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" /> Deactivate
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleApprove(vendor.id)}
+                            className="px-2.5 py-1.5 bg-green-50 hover:bg-green-100 border border-green-200 text-green-700 rounded-xl text-xs font-semibold transition-colors"
+                          >
+                            Activate
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            {filtered.length > 0 && (
+              <div className="px-5 py-3 border-t border-gray-100 flex items-center justify-between bg-gray-50">
+                <span className="text-xs text-gray-400">
+                  Showing <span className="font-semibold text-gray-700">{filtered.length}</span> of{' '}
+                  <span className="font-semibold text-gray-700">{vendors.length}</span> vendors
+                </span>
+                <span className="text-xs text-gray-400">
+                  {counts.Active} active · {counts.Warned} warned · {counts.Deactivated} deactivated · {counts['Reactivation Appeals']} appeals
+                </span>
+              </div>
+            )}
+          </div>
+        )
       )}
 
-      <RejectionReasonModal
-        isOpen={rejectModalOpen}
-        onClose={() => setRejectModalOpen(false)}
-        onConfirm={handleConfirmRejection}
-        entityType="Vendor"
-        entityName={targetVendor?.name}
-      />
-            <DetailsViewModal
+      <DetailsViewModal
         isOpen={detailsModalOpen}
         onClose={() => setDetailsModalOpen(false)}
         data={inspectVendor}
         type="vendor"
         onApprove={handleApprove}
-        onReject={(vendor) => {
-          setDetailsModalOpen(false)
-          setTargetVendor(vendor)
-          setRejectModalOpen(true)
-        }}
-        onWarn={handleWarn}
-        onRemove={handleRemove}
+        onWarn={(id, reason) => apiService.warnUser(id, 'Vendor', reason)}
+        onRemove={(id, reason) => apiService.deactivateUser(id, 'Vendor', reason)}
       />
 
       <WarningModal
         isOpen={warningModalOpen}
         onClose={() => setWarningModalOpen(false)}
-        onConfirm={handleWarn}
+        onConfirm={handleWarnConfirm}
         entityType="Vendor"
         entityName={targetVendor?.name || inspectVendor?.name}
       />
 
-      <WarningModal
-        isOpen={warningModalOpen}
-        onClose={() => setWarningModalOpen(false)}
-        onConfirm={handleWarn}
+      <DeactivateModal
+        isOpen={deactivateModalOpen}
+        onClose={() => setDeactivateModalOpen(false)}
+        onConfirm={handleDeactivateConfirm}
         entityType="Vendor"
         entityName={targetVendor?.name || inspectVendor?.name}
       />
+
+      <ActivityTrailModal
+        isOpen={activityModalOpen}
+        onClose={() => setActivityModalOpen(false)}
+        user={selectedUser}
+      />
+
       <AddVendorModal
         key={addModalOpen ? 'add-vendor-open' : 'add-vendor-closed'}
         isOpen={addModalOpen}
@@ -389,3 +372,4 @@ export const VendorApprovals = () => {
     </div>
   )
 }
+

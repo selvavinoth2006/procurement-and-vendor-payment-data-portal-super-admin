@@ -18,8 +18,8 @@ export const Sidebar = () => {
       const orgs    = await apiService.getOrganizations()
       const vendors = await apiService.getVendors()
       setPendingCounts({
-        orgs:    orgs.filter(o => o.status === 'Pending').length,
-        vendors: vendors.filter(v => v.status === 'Pending').length,
+        orgs:    orgs.filter(o => o.status === 'Pending' || o.reactivation_status === 'Pending').length,
+        vendors: vendors.filter(v => v.status === 'Pending' || v.reactivation_status === 'Pending').length,
       })
     }
     fetchCounts()

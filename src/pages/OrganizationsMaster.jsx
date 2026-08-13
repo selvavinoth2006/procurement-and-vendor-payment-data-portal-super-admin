@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react'
-import { Building2, Search, Filter, Eye, Plus } from 'lucide-react'
+import { Building2, Search, Filter, Eye, Plus, AlertTriangle, Trash2, Activity } from 'lucide-react'
 import { apiService } from '../services/api'
 import { DetailsViewModal } from '../components/modals/DetailsViewModal'
+import { WarningModal } from '../components/modals/WarningModal'
+import { DeactivateModal } from '../components/modals/DeactivateModal'
+import { ActivityTrailModal } from '../components/modals/ActivityTrailModal'
 import { AddOrganizationModal } from '../components/modals/AddOrganizationModal'
 
 export const OrganizationsMaster = () => {
@@ -13,6 +16,11 @@ export const OrganizationsMaster = () => {
   const [inspectOrg, setInspectOrg] = useState(null)
   const [detailsModalOpen, setDetailsModalOpen] = useState(false)
   const [addModalOpen, setAddModalOpen] = useState(false)
+  const [warningModalOpen, setWarningModalOpen] = useState(false)
+  const [deactivateModalOpen, setDeactivateModalOpen] = useState(false)
+  const [activityModalOpen, setActivityModalOpen] = useState(false)
+  const [targetOrg, setTargetOrg] = useState(null)
+  const [selectedUser, setSelectedUser] = useState(null)
 
   useEffect(() => {
     const fetch = async () => {
@@ -119,9 +127,44 @@ export const OrganizationsMaster = () => {
                   <td className="font-bold text-green-700">₹{(org.spend || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
                   <td><span className={(org.status === 'Active' || org.status === 'Approved') ? 'badge-approved' : (org.status === 'Deactivated' || org.status === 'Removed' || org.status === 'Rejected') ? 'badge-rejected' : 'badge-pending'}>{(org.status === 'Approved' || org.status === 'Active') ? 'Active' : (org.status === 'Rejected' || org.status === 'Deactivated' || org.status === 'Removed') ? 'Deactivated' : org.status}</span></td>
                   <td className="text-right">
-                    <button onClick={() => { setInspectOrg(org); setDetailsModalOpen(true) }} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 hover:bg-green-50 border border-gray-200 hover:border-green-200 rounded-xl text-xs font-medium text-gray-600 hover:text-green-700 transition-colors">
-                      <Eye className="w-3.5 h-3.5" /> View Details
-                    </button>
+                    <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                      <button
+                        onClick={() => { setSelectedUser(org); setActivityModalOpen(true) }}
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-700 rounded-xl text-xs font-semibold transition-colors"
+                        title="View user recent activity trail"
+                      >
+                        <Activity className="w-3.5 h-3.5" /> Trail
+                      </button>
+                      <button
+                        onClick={() => { setInspectOrg(org); setDetailsModalOpen(true) }}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 hover:bg-green-50 border border-gray-200 hover:border-green-200 rounded-xl text-xs font-medium text-gray-600 hover:text-green-700 transition-colors"
+                      >
+                        <Eye className="w-3.5 h-3.5" /> View Details
+                      </button>
+                      {org.status !== 'Deactivated' && (
+                        <button
+                          onClick={() => { setTargetOrg(org); setWarningModalOpen(true) }}
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-700 rounded-xl text-xs font-semibold transition-colors"
+                        >
+                          <AlertTriangle className="w-3.5 h-3.5" /> Warn
+                        </button>
+                      )}
+                      {org.status !== 'Deactivated' ? (
+                        <button
+                          onClick={() => { setTargetOrg(org); setDeactivateModalOpen(true) }}
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 rounded-xl text-xs font-semibold transition-colors"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" /> Deactivate
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleApprove(org.id)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-green-50 hover:bg-green-100 border border-green-200 text-green-700 rounded-xl text-xs font-semibold transition-colors"
+                        >
+                          Activate
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -138,29 +181,45 @@ export const OrganizationsMaster = () => {
         onClose={() => setDetailsModalOpen(false)}
         data={inspectOrg}
         type="organization"
-        onApprove={async (id) => {
-          const updated = await apiService.updateOrgStatus(id, 'Approved')
-          setOrganizations(updated)
-          setDetailsModalOpen(false)
-        }}
-        onReject={async (org) => {
-          const orgId = typeof org === 'object' ? org.id : org
-          const updated = await apiService.updateOrgStatus(orgId, 'Rejected', 'Status changed via Details View')
-          setOrganizations(updated)
-          setDetailsModalOpen(false)
-        }}
-        onWarn={async (id, reason) => {
-          const updated = await apiService.updateOrgStatus(id, 'Warned', reason)
-          setOrganizations(updated)
-          setDetailsModalOpen(false)
-        }}
-        onRemove={async (id) => {
-          const updated = await apiService.updateOrgStatus(id, 'Deactivated')
-          setOrganizations(updated)
-          setDetailsModalOpen(false)
-        }}
+        onApprove={handleApprove}
+        onWarn={(id, reason) => apiService.warnUser(id, 'Organization', reason)}
+        onRemove={(id, reason) => apiService.deactivateUser(id, 'Organization', reason)}
       />
+
+      <WarningModal
+        isOpen={warningModalOpen}
+        onClose={() => setWarningModalOpen(false)}
+        onConfirm={async (reason) => {
+          if (targetOrg) {
+            const updated = await apiService.warnUser(targetOrg.id, 'Organization', reason)
+            setOrganizations(updated)
+          }
+        }}
+        entityType="Organization"
+        entityName={targetOrg?.name}
+      />
+
+      <DeactivateModal
+        isOpen={deactivateModalOpen}
+        onClose={() => setDeactivateModalOpen(false)}
+        onConfirm={async (reason) => {
+          if (targetOrg) {
+            const updated = await apiService.deactivateUser(targetOrg.id, 'Organization', reason)
+            setOrganizations(updated)
+          }
+        }}
+        entityType="Organization"
+        entityName={targetOrg?.name}
+      />
+
+      <ActivityTrailModal
+        isOpen={activityModalOpen}
+        onClose={() => setActivityModalOpen(false)}
+        user={selectedUser}
+      />
+
       <AddOrganizationModal key={addModalOpen ? 'add-org-open' : 'add-org-closed'} isOpen={addModalOpen} onClose={() => setAddModalOpen(false)} onCreated={handleCreateOrg} />
     </div>
   )
 }
+
