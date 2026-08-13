@@ -667,6 +667,31 @@ export const apiService = {
     return enriched
   },
 
+  // ── Helper: Resolve entity ID, email, name, and table ───────────────────────
+  async resolveEntity(id, entityType) {
+    const typeStr = (entityType || 'vendor').toLowerCase()
+    const tableName = typeStr.includes('org') ? 'organizations' : typeStr.includes('user') ? 'users' : 'vendors'
+    
+    let list = []
+    if (tableName === 'organizations') list = await this.getOrganizations()
+    else if (tableName === 'vendors') list = await this.getVendors()
+    else {
+      try {
+        const { data } = await supabase.from('users').select('*')
+        if (data) list = data
+      } catch (e) {}
+      if (!list || list.length === 0) list = getLocalData('users', [])
+    }
+
+    const found = list.find(item => item && (String(item.id) === String(id) || (item.email && String(item.email).toLowerCase() === String(id).toLowerCase())))
+    return {
+      id: found?.id || id,
+      email: found?.email || (String(id).includes('@') ? id : null),
+      name: found?.name || found?.contact_person || entityType,
+      tableName
+    }
+  },
+
   // ── Governance: Warning, Deactivation, Notifications & Activity Trail ───
   async sendNotification({ userId, entityId, recipientEmail, title, message, type = 'info' }) {
     const notifObj = {
@@ -675,29 +700,33 @@ export const apiService = {
       recipient_id: userId || entityId || null,
       entity_id: entityId || userId || null,
       recipient_email: recipientEmail || null,
+      email: recipientEmail || null,
       title,
       message,
       type,
       read: false,
       created_at: new Date().toISOString()
     }
+
+    // 1. Insert to Supabase notifications table
     try {
       await supabase.from('notifications').insert([notifObj])
     } catch (e) {
       console.warn('Notification Supabase insert fallback:', e)
     }
 
-    // Dual-store in localStorage for procurehub_notifications and notifications
+    // 2. Dual-store in localStorage keys so all portal apps read notifications immediately
     try {
-      const saved1 = JSON.parse(localStorage.getItem('procurehub_notifications') || '[]')
-      localStorage.setItem('procurehub_notifications', JSON.stringify([notifObj, ...saved1]))
-      const saved2 = JSON.parse(localStorage.getItem('notifications') || '[]')
-      localStorage.setItem('notifications', JSON.stringify([notifObj, ...saved2]))
+      const keys = ['procurehub_notifications', 'notifications', 'procurehub_vendor_notifications', 'procurehub_user_notifications']
+      keys.forEach(key => {
+        const existing = JSON.parse(localStorage.getItem(key) || '[]')
+        localStorage.setItem(key, JSON.stringify([notifObj, ...existing]))
+      })
     } catch (e) {
       console.warn('LocalStorage notification save error:', e)
     }
 
-    // Broadcast live custom event for open UI tabs
+    // 3. Broadcast live event
     try {
       window.dispatchEvent(new CustomEvent('procurehub_notification', { detail: notifObj }))
     } catch (e) {}
@@ -730,62 +759,52 @@ export const apiService = {
   },
 
   async warnUser(id, entityType = 'Vendor', reason) {
+    const { id: realId, email: targetEmail, name: targetName, tableName } = await this.resolveEntity(id, entityType)
+    const storageKey = tableName
+
     const updatePayload = {
       status: 'Warned',
       warning_reason: reason
     }
-    const tableName = entityType.toLowerCase().includes('org') ? 'organizations' : entityType.toLowerCase().includes('user') ? 'users' : 'vendors'
-    const storageKey = entityType.toLowerCase().includes('org') ? 'organizations' : entityType.toLowerCase().includes('user') ? 'users' : 'vendors'
 
-    let targetEmail = String(id).includes('@') ? id : null
-    let targetName = null
-
+    // 1. Update Supabase
     try {
-      if (tableName === 'organizations') {
-        const { data } = await supabase.from('organizations').select('id, email, name').or(`id.eq.${id},email.eq.${id}`)
-        if (data && data[0]) { targetEmail = data[0].email; targetName = data[0].name }
-        await supabase.from('organizations').update(updatePayload).or(`id.eq.${id},email.eq.${id}`)
-      } else if (tableName === 'vendors') {
-        const { data } = await supabase.from('vendors').select('id, email, name').or(`id.eq.${id},email.eq.${id}`)
-        if (data && data[0]) { targetEmail = data[0].email; targetName = data[0].name }
-        await supabase.from('vendors').update(updatePayload).or(`id.eq.${id},email.eq.${id}`)
-      } else {
-        const { data } = await supabase.from('users').select('id, email, name').or(`id.eq.${id},email.eq.${id}`)
-        if (data && data[0]) { targetEmail = data[0].email; targetName = data[0].name }
-        await supabase.from('users').update(updatePayload).or(`id.eq.${id},email.eq.${id}`)
+      if (realId) {
+        await supabase.from(tableName).update(updatePayload).eq('id', realId)
+      }
+      if (targetEmail) {
+        await supabase.from(tableName).update(updatePayload).eq('email', targetEmail)
       }
     } catch (e) {
       console.warn(`Supabase ${tableName} warn update error:`, e)
     }
 
-    // Local fallback update & email resolution
+    // 2. Update Local Storage
     const current = getLocalData(storageKey, [])
     const updated = current.map(item => {
-      if (String(item.id) === String(id) || String(item.email) === String(id) || (targetEmail && item.email === targetEmail)) {
-        if (!targetEmail) targetEmail = item.email
-        if (!targetName) targetName = item.name
+      if (String(item.id) === String(realId) || (targetEmail && item.email === targetEmail)) {
         return { ...item, status: 'Warned', warning_reason: reason }
       }
       return item
     })
     setLocalData(storageKey, updated)
 
-    // In-app Notification
+    // 3. Dispatch Notification
     await this.sendNotification({
-      userId: id,
-      entityId: id,
+      userId: realId,
+      entityId: realId,
       recipientEmail: targetEmail,
       title: 'Warning Notice Issued',
       message: `Your account received an official warning notice: "${reason}". Please ensure platform policy compliance.`,
       type: 'warning'
     })
 
-    // Activity Log
+    // 4. Activity Log
     await this.logUserActivity({
-      userId: id,
-      entityId: id,
+      userId: realId,
+      entityId: realId,
       email: targetEmail,
-      name: targetName || entityType,
+      name: targetName,
       action: 'Warning Notice Issued',
       details: `Super Admin issued warning: ${reason}`
     })
@@ -794,69 +813,60 @@ export const apiService = {
   },
 
   async deactivateUser(id, entityType = 'Vendor', reason) {
+    const { id: realId, email: targetEmail, name: targetName, tableName } = await this.resolveEntity(id, entityType)
+    const storageKey = tableName
+
     const updatePayload = {
       status: 'Deactivated',
       deactivation_reason: reason,
       reactivation_status: 'None'
     }
-    const tableName = entityType.toLowerCase().includes('org') ? 'organizations' : entityType.toLowerCase().includes('user') ? 'users' : 'vendors'
-    const storageKey = entityType.toLowerCase().includes('org') ? 'organizations' : entityType.toLowerCase().includes('user') ? 'users' : 'vendors'
 
-    let targetEmail = String(id).includes('@') ? id : null
-    let targetName = null
-
+    // 1. Update Supabase
     try {
-      if (tableName === 'organizations') {
-        const { data } = await supabase.from('organizations').select('id, email, name').or(`id.eq.${id},email.eq.${id}`)
-        if (data && data[0]) { targetEmail = data[0].email; targetName = data[0].name }
-        await supabase.from('organizations').update(updatePayload).or(`id.eq.${id},email.eq.${id}`)
-      } else if (tableName === 'vendors') {
-        const { data } = await supabase.from('vendors').select('id, email, name').or(`id.eq.${id},email.eq.${id}`)
-        if (data && data[0]) { targetEmail = data[0].email; targetName = data[0].name }
-        await supabase.from('vendors').update(updatePayload).or(`id.eq.${id},email.eq.${id}`)
-      } else {
-        const { data } = await supabase.from('users').select('id, email, name').or(`id.eq.${id},email.eq.${id}`)
-        if (data && data[0]) { targetEmail = data[0].email; targetName = data[0].name }
-        await supabase.from('users').update(updatePayload).or(`id.eq.${id},email.eq.${id}`)
+      if (realId) {
+        await supabase.from(tableName).update(updatePayload).eq('id', realId)
+      }
+      if (targetEmail) {
+        await supabase.from(tableName).update(updatePayload).eq('email', targetEmail)
       }
     } catch (e) {
       console.warn(`Supabase ${tableName} deactivate update error:`, e)
     }
 
-    // Local fallback update
+    // 2. Update Local Storage
     const current = getLocalData(storageKey, [])
     const updated = current.map(item => {
-      if (String(item.id) === String(id) || String(item.email) === String(id) || (targetEmail && item.email === targetEmail)) {
-        if (!targetEmail) targetEmail = item.email
-        if (!targetName) targetName = item.name
+      if (String(item.id) === String(realId) || (targetEmail && item.email === targetEmail)) {
         return { ...item, status: 'Deactivated', deactivation_reason: reason, reactivation_status: 'None' }
       }
       return item
     })
     setLocalData(storageKey, updated)
 
-    // Notification
+    // 3. Dispatch Notification
     await this.sendNotification({
-      userId: id,
-      entityId: id,
+      userId: realId,
+      entityId: realId,
       recipientEmail: targetEmail,
       title: 'Account Deactivated',
       message: `Your account access has been deactivated by Super Admin. Reason: "${reason}".`,
       type: 'deactivation'
     })
 
-    // Activity Log
+    // 4. Activity Log
     await this.logUserActivity({
-      userId: id,
-      entityId: id,
+      userId: realId,
+      entityId: realId,
       email: targetEmail,
-      name: targetName || entityType,
+      name: targetName,
       action: 'Account Deactivated',
       details: `Super Admin deactivated account: ${reason}`
     })
 
     return tableName === 'organizations' ? this.getOrganizations() : this.getVendors()
   },
+
 
   async getReactivationRequests() {
     let requests = []
