@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react'
 import {
   Store, CheckCircle2, XCircle, Search, Eye,
-  RefreshCw, User, FileText
+  RefreshCw, User, FileText, Plus
 } from 'lucide-react'
 import { apiService } from '../services/api'
 import { useNavigate } from 'react-router-dom'
 import { RejectionReasonModal } from '../components/modals/RejectionReasonModal'
 import { DetailsViewModal } from '../components/modals/DetailsViewModal'
+import { AddVendorModal } from '../components/modals/AddVendorModal'
 
 export const VendorApprovals = () => {
   const navigate = useNavigate()
@@ -19,6 +20,7 @@ export const VendorApprovals = () => {
   const [targetVendor, setTargetVendor] = useState(null)
   const [detailsModalOpen, setDetailsModalOpen] = useState(false)
   const [inspectVendor, setInspectVendor] = useState(null)
+  const [addModalOpen, setAddModalOpen] = useState(false)
 
   const loadVendors = async () => {
     setLoading(true)
@@ -35,6 +37,10 @@ export const VendorApprovals = () => {
   const handleConfirmRejection = async (reason) => {
     if (!targetVendor) return
     const updated = await apiService.updateVendorStatus(targetVendor.id, 'Rejected', reason)
+    setVendors(updated)
+  }
+  const handleCreateVendor = async (formData) => {
+    const updated = await apiService.createVendor(formData)
     setVendors(updated)
   }
 
@@ -72,12 +78,20 @@ export const VendorApprovals = () => {
             Verify supplier credentials, GSTIN/PAN, category compliance &amp; authorize platform listing
           </p>
         </div>
-        <button
-          onClick={loadVendors}
-          className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 hover:border-green-300 rounded-xl text-sm font-medium text-gray-600 hover:text-green-700 transition-all shadow-[0_1px_3px_rgba(0,0,0,0.06)]"
-        >
-          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> Refresh
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setAddModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-sm font-semibold transition-all shadow-sm"
+          >
+            <Plus className="w-4 h-4" /> Add Vendor
+          </button>
+          <button
+            onClick={loadVendors}
+            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 hover:border-green-300 rounded-xl text-sm font-medium text-gray-600 hover:text-green-700 transition-all shadow-[0_1px_3px_rgba(0,0,0,0.06)]"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> Refresh
+          </button>
+        </div>
       </div>
 
       {/* Tabs + Filters */}
@@ -302,6 +316,12 @@ export const VendorApprovals = () => {
         onClose={() => setDetailsModalOpen(false)}
         data={inspectVendor}
         type="vendor"
+      />
+      <AddVendorModal
+        key={addModalOpen ? 'add-vendor-open' : 'add-vendor-closed'}
+        isOpen={addModalOpen}
+        onClose={() => setAddModalOpen(false)}
+        onCreated={handleCreateVendor}
       />
     </div>
   )

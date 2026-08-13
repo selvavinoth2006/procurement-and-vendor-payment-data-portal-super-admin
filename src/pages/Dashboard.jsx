@@ -141,27 +141,37 @@ export const Dashboard = () => {
           </div>
 
           <div className="space-y-2.5">
-            {stats.activities.slice(0, 5).map((act) => (
-              <div key={act.id} className="flex items-start gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors">
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
-                  act.type === 'approval'  ? 'bg-green-100 text-green-600' :
-                  act.type === 'rejection' ? 'bg-red-100 text-red-500'    :
-                  act.type === 'order'     ? 'bg-amber-100 text-amber-600' :
-                  'bg-blue-100 text-blue-600'
-                }`}>
-                  {act.type === 'approval' ? <ShieldCheck className="w-4 h-4" /> :
-                   act.type === 'order'    ? <ShoppingBag className="w-4 h-4" /> :
-                   <Clock className="w-4 h-4" />}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-sm font-semibold text-gray-800">{act.title}</h4>
-                    <span className="text-[11px] text-gray-400 shrink-0 ml-2">{act.timestamp}</span>
+            {stats.activities && stats.activities.length > 0 ? (
+              stats.activities.slice(0, 5).map((act) => (
+                <div key={act.id} className="flex items-start gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors">
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                    act.type === 'approval'  ? 'bg-green-100 text-green-600' :
+                    act.type === 'rejection' ? 'bg-red-100 text-red-500'    :
+                    act.type === 'order'     ? 'bg-amber-100 text-amber-600' :
+                    'bg-blue-100 text-blue-600'
+                  }`}>
+                    {act.type === 'approval' ? <ShieldCheck className="w-4 h-4" /> :
+                     act.type === 'order'    ? <ShoppingBag className="w-4 h-4" /> :
+                     <Clock className="w-4 h-4" />}
                   </div>
-                  <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{act.description}</p>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-semibold text-gray-800">{act.title}</h4>
+                      <span className="text-[11px] text-gray-400 shrink-0 ml-2">{act.timestamp}</span>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{act.description}</p>
+                  </div>
                 </div>
+              ))
+            ) : (
+              <div className="flex flex-col items-center justify-center py-10 text-center">
+                <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 mb-2">
+                  <Activity className="w-5 h-5" />
+                </div>
+                <p className="text-sm font-medium text-gray-600">No Recent Activity</p>
+                <p className="text-xs text-gray-400 mt-0.5">Platform activity logs will appear here as actions occur.</p>
               </div>
-            ))}
+            )}
           </div>
         </div>
 

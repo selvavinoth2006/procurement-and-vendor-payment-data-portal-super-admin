@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react'
-import { Building2, Search, Filter, Eye } from 'lucide-react'
+import { Building2, Search, Filter, Eye, Plus } from 'lucide-react'
 import { apiService } from '../services/api'
 import { DetailsViewModal } from '../components/modals/DetailsViewModal'
+import { AddOrganizationModal } from '../components/modals/AddOrganizationModal'
 
 export const OrganizationsMaster = () => {
   const [organizations, setOrganizations] = useState([])
@@ -11,6 +12,7 @@ export const OrganizationsMaster = () => {
   const [industryFilter, setIndustryFilter] = useState('All')
   const [inspectOrg, setInspectOrg] = useState(null)
   const [detailsModalOpen, setDetailsModalOpen] = useState(false)
+  const [addModalOpen, setAddModalOpen] = useState(false)
 
   useEffect(() => {
     const fetch = async () => {
@@ -22,6 +24,11 @@ export const OrganizationsMaster = () => {
     fetch()
   }, [])
 
+  const handleCreateOrg = async (formData) => {
+    const updated = await apiService.createOrganization(formData)
+    setOrganizations(updated)
+  }
+
   const industries = ['All', ...new Set(organizations.map(o => o.industry).filter(Boolean))]
   const filteredOrgs = organizations.filter(org => {
     const matchesStatus   = statusFilter === 'All' || org.status === statusFilter
@@ -32,9 +39,17 @@ export const OrganizationsMaster = () => {
 
   return (
     <div className="space-y-5 animate-fade-in">
-      <div>
-        <h1 className="page-header flex items-center gap-2"><Building2 className="w-6 h-6 text-green-600" /> Organizations Master Directory</h1>
-        <p className="page-sub">Complete global master list of buyer enterprises across all governance statuses</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h1 className="page-header flex items-center gap-2"><Building2 className="w-6 h-6 text-green-600" /> Organizations Master Directory</h1>
+          <p className="page-sub">Complete global master list of buyer enterprises across all governance statuses</p>
+        </div>
+        <button
+          onClick={() => setAddModalOpen(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl text-sm font-semibold transition-all shadow-sm shrink-0 self-start sm:self-auto"
+        >
+          <Plus className="w-4 h-4" /> Add Organization
+        </button>
       </div>
 
       {/* Controls */}
@@ -104,6 +119,7 @@ export const OrganizationsMaster = () => {
       )}
 
       <DetailsViewModal isOpen={detailsModalOpen} onClose={() => setDetailsModalOpen(false)} data={inspectOrg} type="organization" />
+      <AddOrganizationModal key={addModalOpen ? 'add-org-open' : 'add-org-closed'} isOpen={addModalOpen} onClose={() => setAddModalOpen(false)} onCreated={handleCreateOrg} />
     </div>
   )
 }

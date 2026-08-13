@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react'
-import { Store, Search, Filter, Eye, Grid, List } from 'lucide-react'
+import { Store, Search, Filter, Eye, Grid, List, Plus } from 'lucide-react'
 import { apiService } from '../services/api'
 import { DetailsViewModal } from '../components/modals/DetailsViewModal'
+import { AddVendorModal } from '../components/modals/AddVendorModal'
 
 export const VendorsMaster = () => {
   const [vendors, setVendors] = useState([])
@@ -11,11 +12,17 @@ export const VendorsMaster = () => {
   const [viewMode, setViewMode] = useState('table')
   const [inspectVendor, setInspectVendor] = useState(null)
   const [detailsModalOpen, setDetailsModalOpen] = useState(false)
+  const [addModalOpen, setAddModalOpen] = useState(false)
 
   useEffect(() => {
     const fetch = async () => { setLoading(true); const data = await apiService.getVendors(); setVendors(data); setLoading(false) }
     fetch()
   }, [])
+
+  const handleCreateVendor = async (formData) => {
+    const updated = await apiService.createVendor(formData)
+    setVendors(updated)
+  }
 
   const categories = ['All', ...new Set(vendors.map(v => v.category).filter(Boolean))]
   const filteredVendors = vendors.filter(v => {
@@ -31,13 +38,21 @@ export const VendorsMaster = () => {
           <h1 className="page-header flex items-center gap-2"><Store className="w-6 h-6 text-green-600" /> Suppliers & Vendors Directory</h1>
           <p className="page-sub">All authorized suppliers, performance ratings & catalog counts</p>
         </div>
-        <div className="flex bg-gray-100 p-1 rounded-xl border border-gray-200">
-          <button onClick={() => setViewMode('table')} className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors ${viewMode === 'table' ? 'bg-green-600 text-white' : 'text-gray-500 hover:text-gray-800'}`}>
-            <List className="w-3.5 h-3.5" /> Table
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setAddModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-sm font-semibold transition-all shadow-sm shrink-0"
+          >
+            <Plus className="w-4 h-4" /> Add Vendor
           </button>
-          <button onClick={() => setViewMode('grid')} className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors ${viewMode === 'grid' ? 'bg-green-600 text-white' : 'text-gray-500 hover:text-gray-800'}`}>
-            <Grid className="w-3.5 h-3.5" /> Cards
-          </button>
+          <div className="flex bg-gray-100 p-1 rounded-xl border border-gray-200">
+            <button onClick={() => setViewMode('table')} className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors ${viewMode === 'table' ? 'bg-green-600 text-white' : 'text-gray-500 hover:text-gray-800'}`}>
+              <List className="w-3.5 h-3.5" /> Table
+            </button>
+            <button onClick={() => setViewMode('grid')} className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors ${viewMode === 'grid' ? 'bg-green-600 text-white' : 'text-gray-500 hover:text-gray-800'}`}>
+              <Grid className="w-3.5 h-3.5" /> Cards
+            </button>
+          </div>
         </div>
       </div>
 
@@ -124,6 +139,7 @@ export const VendorsMaster = () => {
       )}
 
       <DetailsViewModal isOpen={detailsModalOpen} onClose={() => setDetailsModalOpen(false)} data={inspectVendor} type="vendor" />
+      <AddVendorModal isOpen={addModalOpen} onClose={() => setAddModalOpen(false)} onCreated={handleCreateVendor} />
     </div>
   )
 }

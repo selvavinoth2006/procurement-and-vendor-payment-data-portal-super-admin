@@ -76,13 +76,13 @@ export const ProductDetailModal = ({ isOpen, onClose, product }) => {
             <div className="p-3 bg-gray-50 rounded-xl border border-gray-100 space-y-1">
               <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Unit Price</span>
               <p className="text-base font-extrabold text-green-700">
-                ₹{Number(product.price || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                ₹{Number(product.price ?? product.unit_price ?? product.unitPrice ?? product.cost ?? product.rate ?? product.amount ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
               </p>
             </div>
             <div className="p-3 bg-gray-50 rounded-xl border border-gray-100 space-y-1">
               <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Stock Quantity</span>
               <p className="text-base font-extrabold text-teal-700 flex items-center gap-1">
-                <Boxes className="w-4 h-4" /> {product.stock || 0} units
+                <Boxes className="w-4 h-4" /> {product.stock ?? product.stock_quantity ?? product.quantity ?? product.stock_qty ?? product.qty ?? 0} units
               </p>
             </div>
             <div className="p-3 bg-gray-50 rounded-xl border border-gray-100 space-y-1 col-span-2 sm:col-span-1">

@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react'
 import {
   Building2, CheckCircle2, XCircle, Search, Eye,
-  RefreshCw, ChevronDown, Filter
+  RefreshCw, ChevronDown, Filter, Plus
 } from 'lucide-react'
 import { apiService } from '../services/api'
 import { useNavigate } from 'react-router-dom'
 import { RejectionReasonModal } from '../components/modals/RejectionReasonModal'
 import { DetailsViewModal } from '../components/modals/DetailsViewModal'
+import { AddOrganizationModal } from '../components/modals/AddOrganizationModal'
 
 export const OrgApprovals = () => {
   const navigate = useNavigate()
@@ -19,6 +20,7 @@ export const OrgApprovals = () => {
   const [targetOrg, setTargetOrg] = useState(null)
   const [detailsModalOpen, setDetailsModalOpen] = useState(false)
   const [inspectOrg, setInspectOrg] = useState(null)
+  const [addModalOpen, setAddModalOpen] = useState(false)
 
   const loadOrganizations = async () => {
     setLoading(true)
@@ -35,6 +37,10 @@ export const OrgApprovals = () => {
   const handleConfirmRejection = async (reason) => {
     if (!targetOrg) return
     const updated = await apiService.updateOrgStatus(targetOrg.id, 'Rejected', reason)
+    setOrganizations(updated)
+  }
+  const handleCreateOrg = async (formData) => {
+    const updated = await apiService.createOrganization(formData)
     setOrganizations(updated)
   }
 
@@ -71,12 +77,20 @@ export const OrgApprovals = () => {
             Review buyer organization compliance, GSTIN documentation &amp; activate accounts
           </p>
         </div>
-        <button
-          onClick={loadOrganizations}
-          className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 hover:border-green-300 rounded-xl text-sm font-medium text-gray-600 hover:text-green-700 transition-all shadow-[0_1px_3px_rgba(0,0,0,0.06)]"
-        >
-          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> Refresh
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setAddModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl text-sm font-semibold transition-all shadow-sm"
+          >
+            <Plus className="w-4 h-4" /> Add Organization
+          </button>
+          <button
+            onClick={loadOrganizations}
+            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 hover:border-green-300 rounded-xl text-sm font-medium text-gray-600 hover:text-green-700 transition-all shadow-[0_1px_3px_rgba(0,0,0,0.06)]"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> Refresh
+          </button>
+        </div>
       </div>
 
       {/* Tabs + Filters */}
@@ -276,6 +290,12 @@ export const OrgApprovals = () => {
         onClose={() => setDetailsModalOpen(false)}
         data={inspectOrg}
         type="organization"
+      />
+      <AddOrganizationModal
+        key={addModalOpen ? 'add-org-open' : 'add-org-closed'}
+        isOpen={addModalOpen}
+        onClose={() => setAddModalOpen(false)}
+        onCreated={handleCreateOrg}
       />
     </div>
   )

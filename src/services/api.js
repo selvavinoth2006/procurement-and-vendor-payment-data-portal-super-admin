@@ -285,36 +285,7 @@ const INITIAL_ORDERS = [
   }
 ]
 
-const INITIAL_ACTIVITIES = [
-  {
-    id: 'act-1',
-    title: 'New Vendor Registration',
-    description: 'OmniSys Hardware Systems submitted verification documents for IT Hardware category.',
-    type: 'signup',
-    timestamp: '10 minutes ago'
-  },
-  {
-    id: 'act-2',
-    title: 'Organization Signup',
-    description: 'Apex Global Technologies Ltd registered for enterprise buyer portal.',
-    type: 'signup',
-    timestamp: '2 hours ago'
-  },
-  {
-    id: 'act-3',
-    title: 'Payment Disbursed',
-    description: '₹1,92,000 disbursed to ProOffice Supplies Pvt Ltd for PO-2026-8891.',
-    type: 'order',
-    timestamp: '5 hours ago'
-  },
-  {
-    id: 'act-4',
-    title: 'Organization Approved',
-    description: 'Metropolis Infra Corp was approved by Super Admin.',
-    type: 'approval',
-    timestamp: 'Yesterday at 4:30 PM'
-  }
-]
+const INITIAL_ACTIVITIES = []
 
 // Local state helpers
 const getLocalData = (key, initial) => {
@@ -371,6 +342,52 @@ export const apiService = {
     return updated
   },
 
+  async createOrganization(data) {
+    const newOrg = {
+      id: `org-${Date.now()}`,
+      name: data.name,
+      email: data.email,
+      phone: data.phone || '',
+      industry: data.industry || 'Information Technology',
+      gstin: data.gstin || '',
+      address: data.address || '',
+      status: data.status || 'Approved',
+      created_at: new Date().toISOString(),
+      rejection_reason: null,
+      spend: 0.00,
+      password: data.password || '123456'
+    }
+
+    try {
+      await supabase.from('organizations').insert([{
+        id: newOrg.id,
+        name: newOrg.name,
+        email: newOrg.email,
+        phone: newOrg.phone,
+        industry: newOrg.industry,
+        gstin: newOrg.gstin,
+        address: newOrg.address,
+        status: newOrg.status,
+        created_at: newOrg.created_at,
+        password: newOrg.password
+      }])
+    } catch (e) {
+      console.warn('Supabase org insert fallback:', e)
+    }
+
+    const current = getLocalData('organizations', INITIAL_ORGANIZATIONS)
+    const updated = [newOrg, ...current]
+    setLocalData('organizations', updated)
+
+    this.addActivity({
+      title: 'Organization Added',
+      description: `Super Admin manually created organization: ${newOrg.name}`,
+      type: 'approval'
+    })
+
+    return updated
+  },
+
   // Vendors
   async getVendors() {
     try {
@@ -405,15 +422,94 @@ export const apiService = {
     return updated
   },
 
+  async createVendor(data) {
+    const newVendor = {
+      id: `ven-${Date.now()}`,
+      name: data.name,
+      contact_person: data.contact_person || '',
+      email: data.email,
+      phone: data.phone || '',
+      category: data.category || 'IT Infrastructure & Hardware',
+      gstin: data.gstin || '',
+      pan: data.pan || '',
+      address: data.address || '',
+      status: data.status || 'Approved',
+      created_at: new Date().toISOString(),
+      rejection_reason: null,
+      rating: 100,
+      products_count: 0,
+      password: data.password || '123456'
+    }
+
+    try {
+      await supabase.from('vendors').insert([{
+        id: newVendor.id,
+        name: newVendor.name,
+        contact_person: newVendor.contact_person,
+        email: newVendor.email,
+        phone: newVendor.phone,
+        category: newVendor.category,
+        gstin: newVendor.gstin,
+        pan: newVendor.pan,
+        address: newVendor.address,
+        status: newVendor.status,
+        created_at: newVendor.created_at,
+        password: newVendor.password
+      }])
+    } catch (e) {
+      console.warn('Supabase vendor insert fallback:', e)
+    }
+
+    const current = getLocalData('vendors', INITIAL_VENDORS)
+    const updated = [newVendor, ...current]
+    setLocalData('vendors', updated)
+
+    this.addActivity({
+      title: 'Vendor Added',
+      description: `Super Admin manually created supplier: ${newVendor.name}`,
+      type: 'approval'
+    })
+
+    return updated
+  },
+
+  normalizeProduct(p) {
+    if (!p) return p
+    const rawPrice = p.price ?? p.unit_price ?? p.unitPrice ?? p.price_per_unit ?? p.cost ?? p.rate ?? p.amount ?? 0
+    const rawStock = p.stock ?? p.stock_quantity ?? p.quantity ?? p.stock_qty ?? p.qty ?? p.inventory ?? 0
+    const priceNum = typeof rawPrice === 'string' ? parseFloat(rawPrice.replace(/[^0-9.-]+/g, '')) || 0 : Number(rawPrice) || 0
+    const stockNum = typeof rawStock === 'string' ? parseInt(rawStock, 10) || 0 : Number(rawStock) || 0
+
+    return {
+      ...p,
+      id: p.id || p.product_id || `prod-${Math.random()}`,
+      name: p.name || p.title || p.product_name || 'Unnamed Product',
+      sku: p.sku || p.sku_code || p.code || p.product_code || 'N/A',
+      category: p.category || p.category_name || 'General',
+      price: priceNum,
+      unit_price: priceNum,
+      stock: stockNum,
+      stock_quantity: stockNum,
+      vendor_name: p.vendor_name || p.vendorName || p.supplier_name || p.vendor || 'Vendor Partner',
+      vendor_id: p.vendor_id || p.vendorId || p.supplier_id || '',
+      status: p.status || 'Active',
+      description: p.description || p.desc || '',
+      image: p.image || p.image_url || p.img_url || p.photo_url || p.photo || p.url || ''
+    }
+  },
+
   // Products
   async getProducts() {
     try {
       const { data, error } = await supabase.from('products').select('*')
-      if (!error && data && data.length > 0) return data
+      if (!error && data && data.length > 0) {
+        return data.map(p => this.normalizeProduct(p))
+      }
     } catch (e) {
       console.warn('Supabase products fallback:', e)
     }
-    return getLocalData('products', INITIAL_PRODUCTS)
+    const local = getLocalData('products', INITIAL_PRODUCTS)
+    return local.map(p => this.normalizeProduct(p))
   },
 
   // Purchase Orders
@@ -429,11 +525,46 @@ export const apiService = {
 
   // Activity Logs
   async getActivities() {
-    return getLocalData('activities', INITIAL_ACTIVITIES)
+    try {
+      const { data, error } = await supabase.from('activities').select('*').order('created_at', { ascending: false })
+      if (!error && data && data.length > 0) return data
+    } catch (e) {
+      console.warn('Supabase activities query fallback:', e)
+    }
+    const local = getLocalData('activities', INITIAL_ACTIVITIES) || []
+    const isMock = (a) => {
+      if (!a) return true
+      if (['act-1', 'act-2', 'act-3', 'act-4'].includes(a.id)) return true
+      const desc = a.description || ''
+      if (desc.includes('OmniSys Hardware Systems submitted') ||
+          desc.includes('Apex Global Technologies Ltd registered') ||
+          desc.includes('disbursed to ProOffice Supplies') ||
+          desc.includes('Metropolis Infra Corp was approved')) {
+        return true
+      }
+      return false
+    }
+    const cleaned = local.filter(a => !isMock(a))
+    if (cleaned.length !== local.length) {
+      setLocalData('activities', cleaned)
+    }
+    return cleaned
   },
 
   addActivity(activity) {
-    const current = getLocalData('activities', INITIAL_ACTIVITIES)
+    const isMock = (a) => {
+      if (!a) return true
+      if (['act-1', 'act-2', 'act-3', 'act-4'].includes(a.id)) return true
+      const desc = a.description || ''
+      if (desc.includes('OmniSys Hardware Systems submitted') ||
+          desc.includes('Apex Global Technologies Ltd registered') ||
+          desc.includes('disbursed to ProOffice Supplies') ||
+          desc.includes('Metropolis Infra Corp was approved')) {
+        return true
+      }
+      return false
+    }
+    const current = (getLocalData('activities', INITIAL_ACTIVITIES) || []).filter(a => !isMock(a))
     const newAct = { id: `act-${Date.now()}`, timestamp: 'Just now', ...activity }
     const updated = [newAct, ...current.slice(0, 19)]
     setLocalData('activities', updated)
@@ -571,8 +702,10 @@ export const apiService = {
       const { data, error } = await supabase.from('products').select('*')
       if (!error && data && data.length > 0) {
         realProds = data.filter(p => 
-          String(p.vendor_id) === String(vendorId) ||
-          (p.vendor_name && p.vendor_name.toLowerCase().trim() === vName)
+          String(p.vendor_id || p.vendorId || p.supplier_id) === String(vendorId) ||
+          (p.vendor_name && p.vendor_name.toLowerCase().trim() === vName) ||
+          (p.vendorName && p.vendorName.toLowerCase().trim() === vName) ||
+          (p.supplier_name && p.supplier_name.toLowerCase().trim() === vName)
         )
       }
     } catch (e) {
@@ -582,12 +715,12 @@ export const apiService = {
     if (realProds.length === 0) {
       const allProducts = await this.getProducts()
       realProds = allProducts.filter(p => 
-        String(p.vendor_id) === String(vendorId) ||
+        String(p.vendor_id || p.vendorId || p.supplier_id) === String(vendorId) ||
         (p.vendor_name && p.vendor_name.toLowerCase().trim() === vName)
       )
     }
 
-    return realProds
+    return realProds.map(p => this.normalizeProduct(p))
   },
 
   // ── Get orders for a specific vendor ─────────────────────────────────────

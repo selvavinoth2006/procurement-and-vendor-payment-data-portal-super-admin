@@ -80,11 +80,11 @@ export const ProductsCatalog = () => {
                 <div className="flex items-center justify-between mt-auto pt-2 border-t border-gray-100">
                   <div>
                     <span className="text-[10px] text-gray-400 uppercase font-semibold block">Unit Price</span>
-                    <span className="text-lg font-extrabold text-green-700">₹{prod.price.toLocaleString('en-IN')}</span>
+                    <span className="text-lg font-extrabold text-green-700">₹{Number(prod.price ?? prod.unit_price ?? prod.unitPrice ?? prod.cost ?? prod.rate ?? prod.amount ?? 0).toLocaleString('en-IN')}</span>
                   </div>
                   <div className="text-right">
                     <span className="text-[10px] text-gray-400 uppercase font-semibold block">Stock</span>
-                    <span className="text-xs font-bold text-teal-600 flex items-center gap-1"><Boxes className="w-3.5 h-3.5" />{prod.stock}</span>
+                    <span className="text-xs font-bold text-teal-600 flex items-center gap-1"><Boxes className="w-3.5 h-3.5" />{prod.stock ?? prod.stock_quantity ?? prod.quantity ?? 0}</span>
                   </div>
                 </div>
               </div>
@@ -106,9 +106,9 @@ export const ProductsCatalog = () => {
                   </td>
                   <td className="font-mono text-gray-400 text-xs">{prod.sku}</td>
                   <td><span className="text-xs font-semibold text-green-700">{prod.category}</span></td>
-                  <td className="text-gray-700 font-medium">{prod.vendor_name}</td>
-                  <td className="font-bold text-teal-600">{prod.stock} units</td>
-                  <td className="text-right font-extrabold text-green-700 text-sm">₹{prod.price.toLocaleString('en-IN')}</td>
+                  <td>{prod.vendor_name}</td>
+                  <td className="font-bold text-teal-600">{prod.stock ?? prod.stock_quantity ?? prod.quantity ?? 0} units</td>
+                  <td className="text-right font-extrabold text-green-700 text-sm">₹{Number(prod.price ?? prod.unit_price ?? prod.unitPrice ?? prod.cost ?? prod.rate ?? prod.amount ?? 0).toLocaleString('en-IN')}</td>
                 </tr>
               ))}
             </tbody>

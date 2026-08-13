@@ -332,12 +332,12 @@ export const VendorDetail = () => {
                   <div className="pt-3 border-t border-gray-100 flex items-center justify-between">
                     <div>
                       <span className="text-[10px] text-gray-400 uppercase font-semibold block">Price</span>
-                      <span className="text-sm font-extrabold text-green-700">₹{Number(prod.price).toLocaleString('en-IN')}</span>
+                      <span className="text-sm font-extrabold text-green-700">₹{Number(prod.price ?? prod.unit_price ?? prod.unitPrice ?? prod.cost ?? prod.rate ?? prod.amount ?? 0).toLocaleString('en-IN')}</span>
                     </div>
                     <div className="text-right">
                       <span className="text-[10px] text-gray-400 uppercase font-semibold block">Stock</span>
                       <span className="text-xs font-bold text-teal-600 flex items-center gap-1">
-                        <Boxes className="w-3 h-3" /> {prod.stock} units
+                        <Boxes className="w-3 h-3" /> {prod.stock ?? prod.stock_quantity ?? prod.quantity ?? prod.stock_qty ?? prod.qty ?? 0} units
                       </span>
                     </div>
                   </div>
