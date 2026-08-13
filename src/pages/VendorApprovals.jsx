@@ -316,6 +316,12 @@ export const VendorApprovals = () => {
         onClose={() => setDetailsModalOpen(false)}
         data={inspectVendor}
         type="vendor"
+        onApprove={handleApprove}
+        onReject={(vendor) => {
+          setDetailsModalOpen(false)
+          setTargetVendor(vendor)
+          setRejectModalOpen(true)
+        }}
       />
       <AddVendorModal
         key={addModalOpen ? 'add-vendor-open' : 'add-vendor-closed'}

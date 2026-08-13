@@ -118,7 +118,23 @@ export const OrganizationsMaster = () => {
         </div>
       )}
 
-      <DetailsViewModal isOpen={detailsModalOpen} onClose={() => setDetailsModalOpen(false)} data={inspectOrg} type="organization" />
+      <DetailsViewModal
+        isOpen={detailsModalOpen}
+        onClose={() => setDetailsModalOpen(false)}
+        data={inspectOrg}
+        type="organization"
+        onApprove={async (id) => {
+          const updated = await apiService.updateOrgStatus(id, 'Approved')
+          setOrganizations(updated)
+          setDetailsModalOpen(false)
+        }}
+        onReject={async (org) => {
+          const orgId = typeof org === 'object' ? org.id : org
+          const updated = await apiService.updateOrgStatus(orgId, 'Rejected', 'Status changed via Details View')
+          setOrganizations(updated)
+          setDetailsModalOpen(false)
+        }}
+      />
       <AddOrganizationModal key={addModalOpen ? 'add-org-open' : 'add-org-closed'} isOpen={addModalOpen} onClose={() => setAddModalOpen(false)} onCreated={handleCreateOrg} />
     </div>
   )

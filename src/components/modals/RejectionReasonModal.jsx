@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { X, ShieldAlert, AlertTriangle } from 'lucide-react'
 
 const PRESET_REASONS = [
@@ -42,22 +43,22 @@ export const RejectionReasonModal = ({ isOpen, onClose, onConfirm, entityType = 
     }
   }
 
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-gray-900/50 backdrop-blur-sm overflow-y-auto">
-      <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden max-h-[85vh] my-auto flex flex-col relative z-[101]">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto">
+      <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden max-h-[90vh] my-auto flex flex-col relative z-[10000] animate-fade-in">
 
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-red-50">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-red-50/70">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-red-100 border border-red-200 flex items-center justify-center text-red-600">
+            <div className="w-10 h-10 rounded-xl bg-red-100 border border-red-200 flex items-center justify-center text-red-600 shrink-0">
               <ShieldAlert className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-semibold text-gray-900">Reject {entityType} Signup</h3>
-              <p className="text-xs text-gray-500">Select an official compliance rejection reason</p>
+              <h3 className="font-bold text-lg text-slate-900 leading-tight">Revoke / Reject {entityType}</h3>
+              <p className="text-xs text-slate-500">Select an official compliance rejection reason</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
+          <button type="button" onClick={onClose} className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -65,9 +66,9 @@ export const RejectionReasonModal = ({ isOpen, onClose, onConfirm, entityType = 
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {entityName && (
-            <div className="flex justify-between items-center p-3 bg-gray-50 rounded-xl border border-gray-200 text-sm">
-              <span className="text-gray-500">Target Entity:</span>
-              <span className="font-semibold text-red-700">{entityName}</span>
+            <div className="flex justify-between items-center p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs">
+              <span className="text-slate-500 font-medium">Target Entity:</span>
+              <span className="font-bold text-red-700">{entityName}</span>
             </div>
           )}
 
@@ -78,25 +79,26 @@ export const RejectionReasonModal = ({ isOpen, onClose, onConfirm, entityType = 
           )}
 
           <div>
-            <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">Select Rejection Reason</label>
-            <select value={selectedPreset} onChange={e => setSelectedPreset(e.target.value)} className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-700 bg-white focus:outline-none focus:border-red-400 focus:ring-2 focus:ring-red-400/20">
+            <label className="block text-xs font-bold text-slate-600 uppercase tracking-wide mb-1.5">Select Rejection / Revoke Reason</label>
+            <select value={selectedPreset} onChange={e => setSelectedPreset(e.target.value)} className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-xs text-slate-800 bg-white focus:outline-none focus:border-red-400 focus:ring-2 focus:ring-red-400/20 font-medium">
               {PRESET_REASONS.map((r, i) => <option key={i} value={r}>{r}</option>)}
             </select>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">Additional Notes <span className="text-gray-400 normal-case">(saved to DB rejection_reason)</span></label>
-            <textarea rows={3} value={customReason} onChange={e => { setCustomReason(e.target.value); setError('') }} placeholder="Provide additional details or instructions..." className="w-full border border-gray-200 rounded-xl p-3 text-sm text-gray-700 resize-none focus:outline-none focus:border-red-400 focus:ring-2 focus:ring-red-400/20" />
+            <label className="block text-xs font-bold text-slate-600 uppercase tracking-wide mb-1.5">Additional Notes <span className="text-slate-400 normal-case font-normal">(saved to activity log)</span></label>
+            <textarea rows={3} value={customReason} onChange={e => { setCustomReason(e.target.value); setError('') }} placeholder="Provide additional details or instructions..." className="w-full border border-slate-200 rounded-xl p-3 text-xs text-slate-800 resize-none focus:outline-none focus:border-red-400 focus:ring-2 focus:ring-red-400/20 font-medium" />
           </div>
 
-          <div className="pt-3 border-t border-gray-100 flex justify-end gap-3">
-            <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-100 rounded-xl transition-colors">Cancel</button>
-            <button type="submit" disabled={isSubmitting} className="flex items-center gap-2 px-5 py-2 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-xl transition-colors disabled:opacity-60">
-              {isSubmitting ? <><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />Processing...</> : 'Confirm Rejection'}
+          <div className="pt-3 border-t border-slate-100 flex justify-end gap-3">
+            <button type="button" onClick={onClose} className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white border border-slate-200 rounded-xl transition-colors">Cancel</button>
+            <button type="submit" disabled={isSubmitting} className="flex items-center gap-2 px-5 py-2 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl transition-colors shadow-sm disabled:opacity-60">
+              {isSubmitting ? <><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />Processing...</> : 'Confirm Revoke / Rejection'}
             </button>
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }

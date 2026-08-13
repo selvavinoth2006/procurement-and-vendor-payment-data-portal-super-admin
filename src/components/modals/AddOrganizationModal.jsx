@@ -17,6 +17,7 @@ const INDUSTRIES = [
 export const AddOrganizationModal = ({ isOpen, onClose, onCreated }) => {
   const [formData, setFormData] = useState({
     name: '',
+    contact_person: '',
     email: '',
     phone: '',
     industry: INDUSTRIES[0],
@@ -31,6 +32,7 @@ export const AddOrganizationModal = ({ isOpen, onClose, onCreated }) => {
     if (isOpen) {
       setFormData({
         name: '',
+        contact_person: '',
         email: '',
         phone: '',
         industry: INDUSTRIES[0],
@@ -126,6 +128,21 @@ export const AddOrganizationModal = ({ isOpen, onClose, onCreated }) => {
                 />
               </div>
 
+              {/* Contact Person */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">
+                  Contact Person Name
+                </label>
+                <input
+                  type="text"
+                  name="contact_person"
+                  value={formData.contact_person}
+                  onChange={handleChange}
+                  placeholder="e.g. Vinoth Kumar"
+                  className="w-full h-11 border border-slate-200 rounded-xl px-4 text-sm text-slate-800 placeholder:text-slate-400 bg-slate-50/50 focus:bg-white focus:border-green-500 focus:ring-2 focus:ring-green-500/20 font-medium transition-all"
+                />
+              </div>
+
               {/* Official Email */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">
@@ -190,7 +207,7 @@ export const AddOrganizationModal = ({ isOpen, onClose, onCreated }) => {
               </div>
 
               {/* Governance Status */}
-              <div>
+              <div className="md:col-span-2">
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">
                   Governance Status
                 </label>

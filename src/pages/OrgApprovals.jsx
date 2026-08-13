@@ -290,6 +290,12 @@ export const OrgApprovals = () => {
         onClose={() => setDetailsModalOpen(false)}
         data={inspectOrg}
         type="organization"
+        onApprove={handleApprove}
+        onReject={(org) => {
+          setDetailsModalOpen(false)
+          setTargetOrg(org)
+          setRejectModalOpen(true)
+        }}
       />
       <AddOrganizationModal
         key={addModalOpen ? 'add-org-open' : 'add-org-closed'}
