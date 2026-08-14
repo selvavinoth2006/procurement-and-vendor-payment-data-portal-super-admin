@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { 
+import {
   Building2, Store, IndianRupee, ShoppingBag,
   AlertTriangle, CheckCircle2, RefreshCw, ChevronRight,
   TrendingUp, ShieldCheck, Activity, Clock, ArrowUpRight
@@ -8,7 +8,7 @@ import {
 import { apiService } from '../services/api'
 
 export const Dashboard = () => {
-  const [stats, setStats]   = useState(null)
+  const [stats, setStats] = useState(null)
   const [loading, setLoading] = useState(true)
 
   const load = async () => {
@@ -29,10 +29,10 @@ export const Dashboard = () => {
   )
 
   const statCards = [
-    { title: 'Total Organizations', value: stats.totalOrgs,    icon: Building2,   color: 'text-green-600',  bg: 'bg-green-50',  border: 'border-green-100' },
-    { title: 'Total Vendors',       value: stats.totalVendors, icon: Store,       color: 'text-teal-600',   bg: 'bg-teal-50',   border: 'border-teal-100'  },
-    { title: 'Platform Spend',      value: `₹${stats.totalSpend.toLocaleString('en-IN')}`, icon: IndianRupee, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100' },
-    { title: 'Purchase Orders',     value: stats.totalOrders,  icon: ShoppingBag, color: 'text-green-700',  bg: 'bg-green-50',  border: 'border-green-100' },
+    { title: 'Total Organizations', value: stats.totalOrgs, icon: Building2, color: 'text-green-600', bg: 'bg-green-50', border: 'border-green-100' },
+    { title: 'Total Vendors', value: stats.totalVendors, icon: Store, color: 'text-teal-600', bg: 'bg-teal-50', border: 'border-teal-100' },
+    { title: 'Platform Spend', value: `₹${stats.totalSpend.toLocaleString('en-IN')}`, icon: IndianRupee, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100' },
+    { title: 'Purchase Orders', value: stats.totalOrders, icon: ShoppingBag, color: 'text-green-700', bg: 'bg-green-50', border: 'border-green-100' },
   ]
 
   return (
@@ -144,15 +144,14 @@ export const Dashboard = () => {
             {stats.activities && stats.activities.length > 0 ? (
               stats.activities.slice(0, 5).map((act) => (
                 <div key={act.id} className="flex items-start gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors">
-                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
-                    act.type === 'approval'  ? 'bg-green-100 text-green-600' :
-                    act.type === 'rejection' ? 'bg-red-100 text-red-500'    :
-                    act.type === 'order'     ? 'bg-amber-100 text-amber-600' :
-                    'bg-blue-100 text-blue-600'
-                  }`}>
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${act.type === 'approval' ? 'bg-green-100 text-green-600' :
+                      act.type === 'rejection' ? 'bg-red-100 text-red-500' :
+                        act.type === 'order' ? 'bg-amber-100 text-amber-600' :
+                          'bg-blue-100 text-blue-600'
+                    }`}>
                     {act.type === 'approval' ? <ShieldCheck className="w-4 h-4" /> :
-                     act.type === 'order'    ? <ShoppingBag className="w-4 h-4" /> :
-                     <Clock className="w-4 h-4" />}
+                      act.type === 'order' ? <ShoppingBag className="w-4 h-4" /> :
+                        <Clock className="w-4 h-4" />}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
@@ -181,7 +180,7 @@ export const Dashboard = () => {
           <div className="space-y-2">
             {[
               { label: 'Organization Governance', sub: 'All company registrations', link: '/approvals/organizations', icon: Building2 },
-              { label: 'Vendor Governance',       sub: 'All supplier registrations', link: '/approvals/vendors',       icon: Store       },
+              { label: 'Vendor Governance', sub: 'All supplier registrations', link: '/approvals/vendors', icon: Store },
             ].map((item) => {
               const Icon = item.icon
               return (
@@ -208,3 +207,4 @@ export const Dashboard = () => {
     </div>
   )
 }
+
