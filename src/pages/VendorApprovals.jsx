@@ -75,7 +75,7 @@ export const VendorApprovals = () => {
     Active:               vendors.filter(v => v.status === 'Active' || v.status === 'Approved').length,
     Warned:               vendors.filter(v => v.status === 'Warned').length,
     Deactivated:          vendors.filter(v => v.status === 'Deactivated' || v.status === 'Removed' || v.status === 'Rejected').length,
-    'Reactivation Appeals': vendors.filter(v => v.reactivation_status === 'Pending').length
+    'Reactivation Appeals': vendors.filter(v => v.reactivation_status === 'Pending' || (v.status === 'Deactivated' && (v.reactivation_reason || v.appeal_reason || v.explanation))).length
   }
 
   return (

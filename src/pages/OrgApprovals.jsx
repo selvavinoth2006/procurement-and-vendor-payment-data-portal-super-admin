@@ -74,7 +74,7 @@ export const OrgApprovals = () => {
     Active:               organizations.filter(o => o.status === 'Active' || o.status === 'Approved').length,
     Warned:               organizations.filter(o => o.status === 'Warned').length,
     Deactivated:          organizations.filter(o => o.status === 'Deactivated' || o.status === 'Removed' || o.status === 'Rejected').length,
-    'Reactivation Appeals': organizations.filter(o => o.reactivation_status === 'Pending').length
+    'Reactivation Appeals': organizations.filter(o => o.reactivation_status === 'Pending' || (o.status === 'Deactivated' && (o.reactivation_reason || o.appeal_reason || o.explanation))).length
   }
 
   return (
